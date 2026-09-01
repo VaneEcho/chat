@@ -14,9 +14,22 @@
 		<div id="login-screen" class="login-screen">
 			<div class="login-card">
 				<h1>Chat</h1>
+
+				<div class="room-address">
+					<label for="room-address-input">Room address (share to invite)</label>
+					<div class="room-address-row">
+						<input id="room-address-input" type="text" readonly />
+						<button id="copy-room-btn" type="button" class="icon-btn" title="Copy room link" aria-label="Copy room link">⧉</button>
+					</div>
+				</div>
+
 				<form id="login-form" autocomplete="off">
 					<label for="nick-input">Your nickname</label>
 					<input id="nick-input" type="text" maxlength="32" placeholder="e.g. vane" autocomplete="off" />
+
+					<label for="password-input">Room password (optional)</label>
+					<input id="password-input" type="password" maxlength="128" placeholder="Leave empty for no password" autocomplete="off" />
+
 					<p id="login-error" class="login-error" hidden></p>
 					<button type="submit">Join Chat</button>
 				</form>
@@ -28,6 +41,7 @@
 				<span class="chat-title">Chat</span>
 				<span id="online-count" class="online-count">0 online</span>
 				<span class="header-spacer"></span>
+				<button id="share_btn" class="icon-btn" type="button" title="Copy room link" aria-label="Copy room link">⧉</button>
 				<button id="theme_btn" class="icon-btn" type="button" title="Change theme" aria-label="Change theme">◐</button>
 			</header>
 

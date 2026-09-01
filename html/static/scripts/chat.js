@@ -13,8 +13,15 @@ var Chat = {
 	login_screen: document.getElementById("login-screen"),
 	login_form: document.getElementById("login-form"),
 	nick_input: document.getElementById("nick-input"),
+	password_input: document.getElementById("password-input"),
 	login_error: document.getElementById("login-error"),
 	chat_screen: document.getElementById("chat-screen"),
+
+	room_address_input: document.getElementById("room-address-input"),
+	copy_room_btn: document.getElementById("copy-room-btn"),
+	share_btn: document.getElementById("share_btn"),
+
+	room: null,
 
 	is_focused: false,
 	is_online: false,
@@ -343,13 +350,55 @@ var Chat = {
 		}
 	},
 
+	// Room id lives in the URL (?room=xxx) so it can be shared as a
+	// link. If none is present, generate one and put it in the address
+	// bar without a page reload.
+	generate_room_id: function(){
+		var charset = "abcdefghijklmnopqrstuvwxyz0123456789";
+		var bytes = new Uint8Array(10);
+		crypto.getRandomValues(bytes);
+		return Array.from(bytes, function(b){ return charset[b % charset.length]; }).join('');
+	},
+
+	room_url: function(){
+		var url = new URL(location.href);
+		url.search = "";
+		url.searchParams.set("room", Chat.room);
+		return url.toString();
+	},
+
+	setup_room: function(){
+		var params = new URLSearchParams(location.search);
+		var room = params.get("room");
+
+		if(!room){
+			room = Chat.generate_room_id();
+			params.set("room", room);
+			history.replaceState(null, "", location.pathname + "?" + params.toString());
+		}
+
+		Chat.room = room;
+		Chat.room_address_input.value = Chat.room_url();
+	},
+
+	copy_room_link: function(){
+		var url = Chat.room_url();
+		if(navigator.clipboard && navigator.clipboard.writeText){
+			navigator.clipboard.writeText(url);
+		} else {
+			Chat.room_address_input.select();
+			document.execCommand("copy");
+		}
+	},
+
 	// Show the login screen. If `errorMessage` is set, this is a
-	// rejected attempt (empty/too long/duplicate nick) rather than a
-	// fresh session, so the previous session nick is dropped to avoid
-	// silently retrying the same rejected value forever.
+	// rejected attempt (empty/too long/duplicate nick/wrong password)
+	// rather than a fresh session, so the previous session's
+	// credentials are dropped to avoid silently retrying them forever.
 	show_login: function(errorMessage){
 		if(errorMessage){
 			delete sessionStorage.nick;
+			delete sessionStorage.password;
 			Chat.login_error.textContent = errorMessage;
 			Chat.login_error.hidden = false;
 		} else {
@@ -357,17 +406,20 @@ var Chat = {
 		}
 
 		Chat.nick_input.value = localStorage.nick || "";
+		Chat.password_input.value = "";
 		Chat.chat_screen.hidden = true;
 		Chat.login_screen.hidden = false;
 		Chat.nick_input.focus();
 	},
 
-	submit_login: function(nick){
+	submit_login: function(nick, password){
 		nick = (nick || "").trim();
 		if(!nick) return;
+		password = password || "";
 
 		sessionStorage.nick = localStorage.nick = nick;
-		Chat.socket.emit("login", { nick: nick });
+		sessionStorage.password = password;
+		Chat.socket.emit("login", { nick: nick, room: Chat.room, password: password });
 	},
 
 	on_login_success: function(){
@@ -380,7 +432,7 @@ var Chat = {
 	// re-join automatically instead of asking again.
 	try_resume_session: function(){
 		if(sessionStorage.nick){
-			Chat.submit_login(sessionStorage.nick);
+			Chat.submit_login(sessionStorage.nick, sessionStorage.password);
 		} else {
 			Chat.show_login();
 		}
@@ -470,6 +522,9 @@ var Chat = {
 	},
 
 	init: function(socket){
+		// Parse/generate the room id before anything else can need it.
+		Chat.setup_room();
+
 		// Set green favicon
 		Chat.notif.favicon('red');
 
@@ -528,9 +583,13 @@ var Chat = {
 		// Login form submit
 		Chat.login_form.onsubmit = function(e){
 			e.preventDefault();
-			Chat.submit_login(Chat.nick_input.value);
+			Chat.submit_login(Chat.nick_input.value, Chat.password_input.value);
 			return false;
 		};
+
+		// Copy room link (login screen and in-chat header)
+		Chat.copy_room_btn.onclick = Chat.copy_room_link;
+		Chat.share_btn.onclick = Chat.copy_room_link;
 
 		// On socket events
 		Chat.socket.on("connect", Chat.connect);
