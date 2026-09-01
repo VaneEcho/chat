@@ -270,17 +270,28 @@ var Chat = {
 		// Notify user
 		Chat.notif.create(r.f, r.m);
 
-		var li = document.createElement('div');
-		li.id = r.id;
+		// The <li> holds the prefix and message bubble as direct
+		// children — it's already the flex column that
+		// align-items:flex-end/flex-start (below) positions them
+		// with. An earlier version wrapped them in an extra unstyled
+		// div first, which put a block-level element with
+		// indeterminate shrink-to-fit sizing between the flex
+		// container and its real content, and bubbles ended up
+		// inconsistently widthed/positioned depending on their
+		// content.
+		var c = document.createElement('li');
+		c.id = r.id;
+		if (fromSelf){
+			c.classList.add('message-from-self');
+		}
 
 		var prefix = document.createElement('span');
 		prefix.className = 'prefix';
 		prefix.innerText = r.f;
-		li.appendChild(prefix);
+		c.appendChild(prefix);
 
 		if(Chat.last_sent_nick === r.f){
-			prefix.style.display = "none";
-			li.prefix = prefix;
+			prefix.hidden = true;
 		} else {
 			Chat.last_sent_nick = r.f;
 		}
@@ -293,14 +304,7 @@ var Chat = {
 		Chat.append_msg(body, r.m);
 
 		msg.appendChild(body);
-
-		li.appendChild(msg);
-
-		var c = document.createElement('li');
-		c.appendChild(li);
-		if (fromSelf){
-			c.classList.add('message-from-self');
-		}
+		c.appendChild(msg);
 
 		// Prepend because flex-direction: column-reverse
 		Chat.msgs_list.prepend(c);
