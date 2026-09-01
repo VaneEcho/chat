@@ -193,5 +193,13 @@ var Emic = {
 		Emic.emic_btn.onclick = function(){
 			Emic.container.hidden = !Emic.container.hidden;
 		};
+
+		// Click anywhere outside the picker (and its own toggle button,
+		// which handles itself above) closes it.
+		document.addEventListener('click', function(e){
+			if(Emic.container.hidden) return;
+			if(Emic.container.contains(e.target) || Emic.emic_btn.contains(e.target)) return;
+			Emic.container.hidden = true;
+		});
 	}
 };

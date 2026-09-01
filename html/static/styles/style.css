@@ -521,22 +521,6 @@ a{
 	flex-shrink: 0;
 }
 
-.emic-btn{
-	border: none;
-	background: transparent;
-	cursor: pointer;
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	color: var(--fg);
-	padding: 8px;
-	border-radius: var(--radius-sm);
-}
-
-.emic-btn svg{
-	display: block;
-}
-
 .emic{
 	position: absolute;
 	left: 0;

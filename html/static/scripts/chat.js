@@ -440,6 +440,13 @@ var Chat = {
 	// previous history entry's URL and setup_room() always prefers an
 	// explicit ?room= over localStorage's remembered one.
 	start_new_room: function(){
+		// Forget the current session so the new room lands on the real
+		// login screen instead of silently auto-joining with whatever
+		// nickname/password happened to be remembered — a new room is
+		// a deliberate fresh start, you should get to reconsider both.
+		delete sessionStorage.nick;
+		delete sessionStorage.password;
+
 		var url = new URL(location.href);
 		url.search = "";
 		url.searchParams.set("room", Chat.generate_room_id());
@@ -484,14 +491,20 @@ var Chat = {
 
 	// Briefly swap a button's label to confirm the copy happened —
 	// applied to whichever copy button triggered it.
+	CHECK_ICON_SVG: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+
 	flash_copied: function(btn){
 		if(!btn || btn.dataset.flashing) return;
 		btn.dataset.flashing = "1";
 
-		var original = btn.textContent;
-		btn.textContent = "✓";
+		// innerHTML, not textContent: these buttons hold an inline SVG
+		// icon with no text nodes, so .textContent reads back as "" —
+		// capturing/restoring through it silently destroyed the icon
+		// instead of bringing it back after the flash.
+		var original = btn.innerHTML;
+		btn.innerHTML = Chat.CHECK_ICON_SVG;
 		setTimeout(function(){
-			btn.textContent = original;
+			btn.innerHTML = original;
 			delete btn.dataset.flashing;
 		}, 1200);
 	},
