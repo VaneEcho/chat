@@ -254,9 +254,13 @@ a{
 .users li{
 	padding: 6px 16px;
 	font-size: 13px;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
 }
 
-.users li::before{
+.user-name::before{
 	content: "";
 	display: inline-block;
 	width: 7px;
@@ -264,6 +268,22 @@ a{
 	border-radius: 50%;
 	background: var(--accent);
 	margin-right: 8px;
+}
+
+.logout-btn{
+	border: 1px solid var(--border);
+	background: transparent;
+	color: var(--fg-muted);
+	font-size: 11px;
+	padding: 2px 8px;
+	border-radius: var(--radius-sm);
+	cursor: pointer;
+	flex-shrink: 0;
+}
+
+.logout-btn:hover{
+	color: var(--danger);
+	border-color: var(--danger);
 }
 
 @media only screen and (max-width: 700px){

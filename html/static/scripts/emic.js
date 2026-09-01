@@ -182,21 +182,15 @@ var Emic = {
 				Emic.textarea.focus();
 			};
 
-			Emic.container.onmousedown = function(e){
-				e.preventDefault();
-			};
 			Emic.container.appendChild(obj);
 		}
 
-		var toggle = Emic.container.style.display;
+		Emic.container.onmousedown = function(e){
+			e.preventDefault();
+		};
+
 		Emic.emic_btn.onclick = function(){
-			if(toggle == "none"){
-				Emic.container.style.display = "inline-block";
-				toggle = "block";
-			} else {
-				Emic.container.style.display = "none";
-				toggle = "none";
-			}
+			Emic.container.hidden = !Emic.container.hidden;
 		};
 	}
 };

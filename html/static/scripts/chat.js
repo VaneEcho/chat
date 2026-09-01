@@ -45,8 +45,6 @@ var Chat = {
 		},
 
 		// Title time-out
-		ttout: undefined,
-
 		active: undefined,
 		msgs: 0,
 
@@ -94,24 +92,11 @@ var Chat = {
 				return;
 			}
 
-			// Increase number in title
+			// Increase number in title. Set once and leave it — no
+			// blinking back and forth, that's just distracting.
 			Chat.notif.msgs++;
-
-			// Create new ttout, if there is not any
 			Chat.notif.favicon('blue');
 			document.title = '(' + Chat.notif.msgs + ') ' + Chat.new_title;
-
-			if(typeof Chat.notif.ttout === "undefined"){
-				Chat.notif.ttout = setInterval(function(){
-					if(document.title == Chat.original_title){
-						Chat.notif.favicon('blue');
-						document.title = '(' + Chat.notif.msgs + ') ' + Chat.new_title;
-					} else {
-						Chat.notif.favicon('green');
-						document.title = Chat.original_title;
-					}
-				}, 1500);
-			}
 
 			// Do beep
 			Chat.notif.beep.playclip();
@@ -383,12 +368,24 @@ var Chat = {
 
 	copy_room_link: function(){
 		var url = Chat.room_url();
+
 		if(navigator.clipboard && navigator.clipboard.writeText){
 			navigator.clipboard.writeText(url);
-		} else {
-			Chat.room_address_input.select();
-			document.execCommand("copy");
+			return;
 		}
+
+		// Fallback that doesn't depend on any particular input being
+		// visible/focusable (the room-address field is hidden once past
+		// the login screen, so selecting it wouldn't work there).
+		var tmp = document.createElement("textarea");
+		tmp.value = url;
+		tmp.style.position = "fixed";
+		tmp.style.opacity = "0";
+		document.body.appendChild(tmp);
+		tmp.focus();
+		tmp.select();
+		try { document.execCommand("copy"); } catch (e) {}
+		document.body.removeChild(tmp);
 	},
 
 	// Show the login screen. If `errorMessage` is set, this is a
@@ -396,6 +393,8 @@ var Chat = {
 	// rather than a fresh session, so the previous session's
 	// credentials are dropped to avoid silently retrying them forever.
 	show_login: function(errorMessage){
+		Chat.self_nick = null;
+
 		if(errorMessage){
 			delete sessionStorage.nick;
 			delete sessionStorage.password;
@@ -417,9 +416,21 @@ var Chat = {
 		if(!nick) return;
 		password = password || "";
 
+		Chat.self_nick = nick;
 		sessionStorage.nick = localStorage.nick = nick;
 		sessionStorage.password = password;
 		Chat.socket.emit("login", { nick: nick, room: Chat.room, password: password });
+	},
+
+	// End this session so the tab is ready for a different nickname:
+	// forget the remembered session, then bounce the connection so the
+	// server's normal disconnect handling (leave room, notify others)
+	// runs and we land back on the login screen.
+	logout: function(){
+		delete sessionStorage.nick;
+		delete sessionStorage.password;
+		Chat.socket.disconnect();
+		Chat.socket.connect();
 	},
 
 	on_login_success: function(){
@@ -446,17 +457,47 @@ var Chat = {
 			Chat.online_count.textContent = n + " online";
 		},
 
-		// Load all users
+		// Build a user list entry. Self gets a Logout button so this
+		// tab can become a different user next time.
+		create_entry: function(nick){
+			var li = document.createElement('li');
+
+			var label = document.createElement('span');
+			label.className = 'user-name';
+			label.innerText = nick;
+			li.appendChild(label);
+
+			if(nick === Chat.self_nick){
+				li.classList.add('is-self');
+
+				var logoutBtn = document.createElement('button');
+				logoutBtn.type = 'button';
+				logoutBtn.className = 'logout-btn';
+				logoutBtn.innerText = 'Logout';
+				logoutBtn.onclick = Chat.logout;
+				li.appendChild(logoutBtn);
+			}
+
+			return li;
+		},
+
+		// Load all users. Self is always shown first.
 		start: function(r){
 			Chat.users.innerText = '';
 			Chat.user.objects = {};
 
-			for(var user in r.users){
-				var nick = document.createElement('li');
-				nick.innerText = r.users[user];
-				Chat.users.appendChild(nick);
-				Chat.user.objects[r.users[user]] = nick;
+			var names = r.users.slice();
+			var selfIndex = names.indexOf(Chat.self_nick);
+			if(selfIndex > 0){
+				names.splice(selfIndex, 1);
+				names.unshift(Chat.self_nick);
 			}
+
+			names.forEach(function(name){
+				var li = Chat.user.create_entry(name);
+				Chat.users.appendChild(li);
+				Chat.user.objects[name] = li;
+			});
 
 			Chat.user.update_count();
 			Chat.on_login_success();
@@ -474,10 +515,9 @@ var Chat = {
 		enter: function(r){
 			console.log("User " + r.nick + " joined.");
 
-			var nick = document.createElement('li');
-			nick.innerText = r.nick;
-			Chat.users.appendChild(nick);
-			Chat.user.objects[r.nick] = nick;
+			var li = Chat.user.create_entry(r.nick);
+			Chat.users.appendChild(li);
+			Chat.user.objects[r.nick] = li;
 			Chat.user.update_count();
 		},
 
@@ -542,10 +582,6 @@ var Chat = {
 			if(!Chat.is_online){
 				return;
 			}
-
-			// Clear ttout, if there was
-			typeof Chat.notif.ttout === "undefined" || clearInterval(Chat.notif.ttout);
-			Chat.notif.ttout = undefined;
 
 			// Clear notifications
 			Chat.notif.clear();
