@@ -58,7 +58,9 @@ function isValidRoomId(room){
 }
 
 http.listen(port, function(){
-	console.log("Starting server on port %s", port);
+	// Log the actually-bound port, not the requested one — matters
+	// when PORT=0 asks the OS to pick a free port for us.
+	console.log("Starting server on port %s", http.address().port);
 });
 
 // roomId -> { users: string[], messageCache: object[], msgId: number, password: string }

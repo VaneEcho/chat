@@ -4,24 +4,25 @@ const { io } = require('socket.io-client')
 
 const SERVER_PATH = path.join(__dirname, '..', 'server.js')
 
-// Spawns the real server as a child process on a free port, the same way
-// it runs in production, so tests exercise actual behavior rather than
-// requiring server.js to be refactored for testability.
+// Spawns the real server as a child process, the same way it runs in
+// production, so tests exercise actual behavior rather than requiring
+// server.js to be refactored for testability. Port 0 asks the OS for
+// a free ephemeral port instead of guessing one ourselves — a guessed
+// port can collide under parallel test runs, an OS-assigned one can't.
 function startServer(env = {}) {
-  const port = 10000 + Math.floor(Math.random() * 20000)
-
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [SERVER_PATH, String(port)], {
+    const child = spawn(process.execPath, [SERVER_PATH, '0'], {
       env: { ...process.env, ...env },
       stdio: ['ignore', 'pipe', 'pipe'],
     })
 
     let started = false
     const onData = (data) => {
-      if (!started && data.toString().includes('Starting server')) {
+      const match = data.toString().match(/Starting server on port (\d+)/)
+      if (!started && match) {
         started = true
         child.stdout.off('data', onData)
-        resolve({ port, child })
+        resolve({ port: Number(match[1]), child })
       }
     }
     child.stdout.on('data', onData)
