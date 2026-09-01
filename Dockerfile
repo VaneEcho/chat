@@ -1,28 +1,24 @@
 FROM node:24-bookworm-slim
 
-#
-# install packages
-RUN apt-get update \
-    && apt-get install -y curl \
-    && rm -rf /var/lib/apt/lists/*
-
-#
-# create app directory
 WORKDIR /usr/src/app
 
-#
-# install app dependencies
+# Install app dependencies with a reproducible, lockfile-exact install.
 COPY package*.json ./
-RUN npm install
+RUN npm ci --omit=dev
 
-#
-# copy app
+# Copy app
 COPY . .
 
 ENV MAX_HTTP_BUFFER_SIZE_MB=1
+ENV PORT=8080
+
+# Official node images already ship a non-root "node" user.
+USER node
+
+EXPOSE 8080
+
+# No curl dependency: Node itself can make the request.
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:' + (process.env.PORT || 8080) + '/healthz', res => process.exit(res.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
 
 ENTRYPOINT [ "node", "server.js" ]
-
-EXPOSE 80
-CMD [ "80" ]
-
