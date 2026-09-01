@@ -19,7 +19,8 @@ var Chat = {
 	login_error: document.getElementById("login-error"),
 	chat_screen: document.getElementById("chat-screen"),
 
-	room_address_input: document.getElementById("room-address-input"),
+	room_preview_name: document.getElementById("room-preview-name"),
+	reroll_room_btn: document.getElementById("reroll-room-btn"),
 	copy_room_btn: document.getElementById("copy-room-btn"),
 	share_btn: document.getElementById("share_btn"),
 	new_room_btn: document.getElementById("new_room_btn"),
@@ -469,7 +470,28 @@ var Chat = {
 
 		Chat.room = room;
 		localStorage.room = room;
-		Chat.room_address_input.value = Chat.room_url();
+		Chat.update_room_preview();
+	},
+
+	update_room_preview: function(){
+		Chat.room_preview_name.textContent = Chat.room;
+	},
+
+	// Login-screen-only "give me a different one": unlike
+	// start_new_room (a real navigation, used once you've actually
+	// joined a room and are deliberately leaving it), there's nothing
+	// to leave yet here — just swap which room the login form would
+	// join, silently, the same way setup_room's own random pick works.
+	reroll_room: function(){
+		var room = Chat.generate_room_id();
+		var url = new URL(location.href);
+		url.search = "";
+		url.searchParams.set("room", room);
+		history.replaceState(null, "", url.pathname + url.search);
+
+		Chat.room = room;
+		localStorage.room = room;
+		Chat.update_room_preview();
 	},
 
 	// CSS's 100dvh doesn't reliably shrink when the on-screen keyboard
@@ -495,16 +517,22 @@ var Chat = {
 
 	flash_copied: function(btn){
 		if(!btn || btn.dataset.flashing) return;
+		var icon = btn.querySelector("svg");
+		if(!icon) return;
 		btn.dataset.flashing = "1";
 
-		// innerHTML, not textContent: these buttons hold an inline SVG
-		// icon with no text nodes, so .textContent reads back as "" —
-		// capturing/restoring through it silently destroyed the icon
-		// instead of bringing it back after the flash.
-		var original = btn.innerHTML;
-		btn.innerHTML = Chat.CHECK_ICON_SVG;
+		// Swap just the <svg> (via outerHTML, not the icon-only
+		// btn.textContent trick this used to use — that read back as
+		// "" and silently destroyed the icon instead of restoring it)
+		// rather than the whole button: some of these buttons also
+		// carry a text label ("Copy link"), and replacing all of it
+		// would shrink the button for the flash's duration, shifting
+		// its sibling in the row.
+		var original = icon.outerHTML;
+		icon.outerHTML = Chat.CHECK_ICON_SVG;
 		setTimeout(function(){
-			btn.innerHTML = original;
+			var current = btn.querySelector("svg");
+			if(current) current.outerHTML = original;
 			delete btn.dataset.flashing;
 		}, 1200);
 	},
@@ -520,9 +548,9 @@ var Chat = {
 			return;
 		}
 
-		// Fallback that doesn't depend on any particular input being
-		// visible/focusable (the room-address field is hidden once past
-		// the login screen, so selecting it wouldn't work there).
+		// Fallback that doesn't depend on any particular visible element
+		// existing on the page (the header's share button has no
+		// associated input to select from at all).
 		var tmp = document.createElement("textarea");
 		tmp.value = url;
 		tmp.style.position = "fixed";
@@ -816,6 +844,7 @@ var Chat = {
 
 		// Copy room link (login screen and in-chat header)
 		Chat.copy_room_btn.onclick = Chat.copy_room_link;
+		Chat.reroll_room_btn.onclick = Chat.reroll_room;
 		Chat.share_btn.onclick = Chat.copy_room_link;
 		Chat.new_room_btn.onclick = Chat.start_new_room;
 
