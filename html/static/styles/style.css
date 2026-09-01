@@ -152,6 +152,10 @@ a{
 	gap: 6px;
 }
 
+.room-address-row .icon-btn{
+	flex-shrink: 0;
+}
+
 .room-address-row input{
 	flex: 1;
 	min-width: 0;
@@ -166,7 +170,7 @@ a{
 	outline-offset: -1px;
 }
 
-.login-card button{
+.login-submit-btn{
 	width: 100%;
 	padding: 11px;
 	border: none;
