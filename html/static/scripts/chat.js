@@ -6,8 +6,15 @@ var Chat = {
 	msgs_list: document.getElementById("msgs"),
 	typing_list: document.getElementById("typing"),
 	users: document.getElementById("users"),
+	online_count: document.getElementById("online-count"),
 	textarea: document.getElementById("form_input"),
 	send_btn: document.getElementById("send"),
+
+	login_screen: document.getElementById("login-screen"),
+	login_form: document.getElementById("login-form"),
+	nick_input: document.getElementById("nick-input"),
+	login_error: document.getElementById("login-error"),
+	chat_screen: document.getElementById("chat-screen"),
 
 	is_focused: false,
 	is_online: false,
@@ -336,34 +343,61 @@ var Chat = {
 		}
 	},
 
-	force_login: function(fail){
-		if(typeof fail !== "undefined"){
-			alert(fail);
+	// Show the login screen. If `errorMessage` is set, this is a
+	// rejected attempt (empty/too long/duplicate nick) rather than a
+	// fresh session, so the previous session nick is dropped to avoid
+	// silently retrying the same rejected value forever.
+	show_login: function(errorMessage){
+		if(errorMessage){
+			delete sessionStorage.nick;
+			Chat.login_error.textContent = errorMessage;
+			Chat.login_error.hidden = false;
+		} else {
+			Chat.login_error.hidden = true;
 		}
 
-		var nick = prompt("Your nick:", sessionStorage.nick || localStorage.nick || "").trim();
-		if(typeof nick !== "undefined" && nick){
-			sessionStorage.nick = localStorage.nick = nick;
-			Chat.socket.emit("login", {
-				nick: nick
-			});
-		}
+		Chat.nick_input.value = localStorage.nick || "";
+		Chat.chat_screen.hidden = true;
+		Chat.login_screen.hidden = false;
+		Chat.nick_input.focus();
 	},
 
-	reload: function(){
-		if(typeof sessionStorage.nick !== "undefined" && sessionStorage.nick){
-			Chat.socket.emit("login", {
-				nick: sessionStorage.nick
-			});
+	submit_login: function(nick){
+		nick = (nick || "").trim();
+		if(!nick) return;
+
+		sessionStorage.nick = localStorage.nick = nick;
+		Chat.socket.emit("login", { nick: nick });
+	},
+
+	on_login_success: function(){
+		Chat.login_screen.hidden = true;
+		Chat.chat_screen.hidden = false;
+	},
+
+	// If this tab already had a nick this session (e.g. the page was
+	// refreshed, or the socket reconnected after a network drop),
+	// re-join automatically instead of asking again.
+	try_resume_session: function(){
+		if(sessionStorage.nick){
+			Chat.submit_login(sessionStorage.nick);
+		} else {
+			Chat.show_login();
 		}
 	},
 
 	user: {
 		objects: {},
 
+		update_count: function(){
+			var n = Object.keys(Chat.user.objects).length;
+			Chat.online_count.textContent = n + " online";
+		},
+
 		// Load all users
 		start: function(r){
 			Chat.users.innerText = '';
+			Chat.user.objects = {};
 
 			for(var user in r.users){
 				var nick = document.createElement('li');
@@ -371,6 +405,9 @@ var Chat = {
 				Chat.users.appendChild(nick);
 				Chat.user.objects[r.users[user]] = nick;
 			}
+
+			Chat.user.update_count();
+			Chat.on_login_success();
 		},
 
 		previous_messages: function(data){
@@ -389,6 +426,7 @@ var Chat = {
 			nick.innerText = r.nick;
 			Chat.users.appendChild(nick);
 			Chat.user.objects[r.nick] = nick;
+			Chat.user.update_count();
 		},
 
 		// User left room
@@ -404,6 +442,7 @@ var Chat = {
 				element.parentNode.removeChild(element);
 				delete Chat.user.objects[r.nick];
 			}
+			Chat.user.update_count();
 		}
 	},
 
@@ -412,14 +451,14 @@ var Chat = {
 		Chat.notif.favicon('green');
 		Chat.is_online = true;
 
-		document.getElementById('offline').style.display = "none";
+		document.getElementById('offline').hidden = true;
 		Chat.msgs_list.innerText = '';
 		Chat.typing_list.innerText = '';
 		Chat.users.innerText = '';
+		Chat.user.objects = {};
 		Chat.last_sent_nick = '';
 
-		// force user to login
-		Chat.force_login();
+		Chat.try_resume_session();
 	},
 
 	disconnect: function(){
@@ -427,10 +466,7 @@ var Chat = {
 		Chat.notif.favicon('red');
 		Chat.is_online = false;
 
-		document.getElementById('offline').style.display = "block";
-		Chat.msgs_list.innerText = '';
-		Chat.typing_list.innerText = '';
-		Chat.users.innerText = '';
+		document.getElementById('offline').hidden = false;
 	},
 
 	init: function(socket){
@@ -489,11 +525,18 @@ var Chat = {
 		// Check if is user typing
 		Chat.textarea.onkeyup = Chat.typing.update;
 
+		// Login form submit
+		Chat.login_form.onsubmit = function(e){
+			e.preventDefault();
+			Chat.submit_login(Chat.nick_input.value);
+			return false;
+		};
+
 		// On socket events
 		Chat.socket.on("connect", Chat.connect);
 		Chat.socket.on("disconnect", Chat.disconnect);
 
-		Chat.socket.on("force-login", Chat.force_login);
+		Chat.socket.on("force-login", Chat.show_login);
 		Chat.socket.on("typing", Chat.typing.event);
 		Chat.socket.on("new-msg", Chat.new_msg);
 
