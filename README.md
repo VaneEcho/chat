@@ -27,10 +27,16 @@ passwords.
 
 ## Quick start
 
-No tagged release has been published to GHCR yet (CI builds and
-publishes `ghcr.io/vaneecho/chat` on every `vX.Y.Z` tag — see
-[`.github/workflows/docker.yml`](./.github/workflows/docker.yml)).
-Until then, build it locally — still one command:
+```sh
+docker run -d \
+  --name chat \
+  -p 8090:8080 \
+  ghcr.io/vaneecho/chat:latest
+```
+
+Then open `http://localhost:8090`.
+
+## Docker Compose
 
 ```sh
 git clone https://github.com/VaneEcho/chat.git
@@ -38,14 +44,9 @@ cd chat
 docker compose up -d
 ```
 
-Then open `http://localhost:8090`. See [`compose.yaml`](./compose.yaml).
-
-Or without Compose:
-
-```sh
-docker build -t chat .
-docker run -d --name chat -p 8090:8080 chat
-```
+Builds from the included `Dockerfile` (see
+[`compose.yaml`](./compose.yaml)) rather than pulling the published
+image — handy if you're modifying the app.
 
 ## Configuration
 
