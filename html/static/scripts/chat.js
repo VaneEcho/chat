@@ -515,7 +515,9 @@ var Chat = {
 
 	// Briefly swap a button's label to confirm the copy happened —
 	// applied to whichever copy button triggered it.
-	CHECK_ICON_SVG: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+	check_icon_svg: function(size){
+		return '<svg viewBox="0 0 24 24" width="' + size + '" height="' + size + '" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+	},
 
 	flash_copied: function(btn){
 		if(!btn || btn.dataset.flashing) return;
@@ -529,9 +531,14 @@ var Chat = {
 		// rather than the whole button: some of these buttons also
 		// carry a text label ("Copy link"), and replacing all of it
 		// would shrink the button for the flash's duration, shifting
-		// its sibling in the row.
+		// its sibling in the row. Match the replacement's size to the
+		// icon actually being replaced — not every copy button uses
+		// the same icon size (header vs. login screen), and a
+		// hardcoded size grew the button during the flash on whichever
+		// one it didn't match.
+		var size = icon.getAttribute("width") || "18";
 		var original = icon.outerHTML;
-		icon.outerHTML = Chat.CHECK_ICON_SVG;
+		icon.outerHTML = Chat.check_icon_svg(size);
 		setTimeout(function(){
 			var current = btn.querySelector("svg");
 			if(current) current.outerHTML = original;

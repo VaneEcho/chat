@@ -293,6 +293,14 @@ a{
 	gap: 8px;
 }
 
+.user-name{
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
 .user-name::before{
 	content: "";
 	display: inline-block;
@@ -312,6 +320,7 @@ a{
 	border-radius: var(--radius-sm);
 	cursor: pointer;
 	flex-shrink: 0;
+	white-space: nowrap;
 }
 
 .logout-btn:hover{
