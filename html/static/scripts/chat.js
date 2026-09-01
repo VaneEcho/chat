@@ -714,8 +714,10 @@ var Chat = {
 
 				var logoutBtn = document.createElement('button');
 				logoutBtn.type = 'button';
-				logoutBtn.className = 'logout-btn';
-				logoutBtn.innerText = 'Logout';
+				logoutBtn.className = 'icon-btn logout-btn';
+				logoutBtn.title = 'Logout';
+				logoutBtn.setAttribute('aria-label', 'Logout');
+				logoutBtn.innerHTML = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4H6a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h9"/><path d="M11 12h9M17 8l4 4-4 4"/></svg>';
 				logoutBtn.onclick = Chat.logout;
 				li.appendChild(logoutBtn);
 			}

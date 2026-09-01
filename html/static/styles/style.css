@@ -313,14 +313,9 @@ a{
 
 .logout-btn{
 	border: 1px solid var(--border);
-	background: transparent;
 	color: var(--fg-muted);
-	font-size: 11px;
-	padding: 2px 8px;
-	border-radius: var(--radius-sm);
-	cursor: pointer;
+	padding: 4px;
 	flex-shrink: 0;
-	white-space: nowrap;
 }
 
 .logout-btn:hover{
