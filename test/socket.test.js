@@ -156,8 +156,35 @@ test('message: over MAX_MESSAGE_LENGTH is silently dropped', async (t) => {
   b.disconnect()
 })
 
+test('rate limit: messages beyond the per-window cap are dropped', async (t) => {
+  const server = await startServer({ MAX_MESSAGES_PER_WINDOW: '3', MESSAGE_WINDOW_MS: '5000' })
+  t.after(() => stopServer(server))
+
+  const a = connectClient(server.port)
+  await waitFor(a, 'connect')
+  a.emit('login', { nick: 'Alice' })
+  await waitFor(a, 'start')
+
+  const b = connectClient(server.port)
+  await waitFor(b, 'connect')
+  b.emit('login', { nick: 'Bob' })
+  await waitFor(b, 'start')
+
+  const received = []
+  b.on('new-msg', (m) => received.push(m))
+
+  for (let i = 0; i < 6; i++) {
+    a.emit('send-msg', { m: { text: `msg ${i}` } })
+  }
+  await wait(400)
+
+  assert.equal(received.length, 3)
+  a.disconnect()
+  b.disconnect()
+})
+
 test('cache: CACHE_SIZE above the server-side max is clamped', async (t) => {
-  const server = await startServer({ CACHE_SIZE: '999999999' })
+  const server = await startServer({ CACHE_SIZE: '999999999', MAX_MESSAGES_PER_WINDOW: '999999' })
   t.after(() => stopServer(server))
 
   const a = connectClient(server.port)

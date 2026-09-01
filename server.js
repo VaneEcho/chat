@@ -2,6 +2,28 @@ require('dotenv').config()
 const express = require('express')
 const app = express()
 
+// Basic security headers. style-src keeps 'unsafe-inline' because the
+// client sets inline styles via the DOM style API (e.g. img.style.cssText)
+// when rendering shared images; script-src does not need it since the
+// page ships no inline <script> content.
+app.use(function(req, res, next){
+	res.setHeader("X-Content-Type-Options", "nosniff");
+	res.setHeader("X-Frame-Options", "DENY");
+	res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+	res.setHeader("Content-Security-Policy", [
+		"default-src 'self'",
+		"script-src 'self'",
+		"style-src 'self' 'unsafe-inline'",
+		"img-src 'self' data: blob:",
+		"media-src 'self' data: blob:",
+		"connect-src 'self' ws: wss:",
+		"object-src 'none'",
+		"base-uri 'self'",
+		"frame-ancestors 'none'",
+	].join('; '));
+	next();
+});
+
 app.get('/healthz', function(req, res){
 	res.json({ status: "ok" });
 });
@@ -20,6 +42,8 @@ const io = require("socket.io")(http, {
 
 const MAX_NICK_LENGTH = parseInt(process.env.MAX_NICK_LENGTH) || 32;
 const MAX_MESSAGE_LENGTH = parseInt(process.env.MAX_MESSAGE_LENGTH) || 4000;
+const MAX_MESSAGES_PER_WINDOW = parseInt(process.env.MAX_MESSAGES_PER_WINDOW) || 5;
+const MESSAGE_WINDOW_MS = parseInt(process.env.MESSAGE_WINDOW_MS) || 5000;
 const MAX_CACHE_SIZE = 500;
 
 let messageCache = [];
@@ -37,6 +61,7 @@ io.sockets.on("connection", function(socket){
 	console.log("New connection!");
 
 	var nick = null;
+	var messageTimestamps = [];
 
 	socket.on("login", function(data){
 		// Security checks
@@ -99,6 +124,16 @@ io.sockets.on("connection", function(socket){
 			socket.emit("force-login", "You need to be logged in to send message.");
 			return;
 		}
+
+		// Flood protection: drop messages once this connection exceeds
+		// MAX_MESSAGES_PER_WINDOW within MESSAGE_WINDOW_MS.
+		const now = Date.now();
+		messageTimestamps = messageTimestamps.filter(t => now - t < MESSAGE_WINDOW_MS);
+		if(messageTimestamps.length >= MAX_MESSAGES_PER_WINDOW){
+			console.log("Rate limit triggered for %s.", nick.replace(/(<([^>]+)>)/ig, ""));
+			return;
+		}
+		messageTimestamps.push(now);
 
 		if(typeof data !== "object" || data === null || typeof data.m !== "object" || data.m === null){
 			return;
