@@ -133,3 +133,8 @@ GPL-3.0, same as upstream. See [`LICENSE`](./LICENSE).
 
 Originally created by [m1k1o](https://github.com/m1k1o). This fork is
 maintained at [VaneEcho/chat](https://github.com/VaneEcho/chat).
+
+QR code rendering vendors
+[qrcode-generator](https://github.com/kazuhikoarase/qrcode-generator)
+by Kazuhiko Arase (MIT) as a static file — no network dependency, runs
+entirely client-side.

@@ -41,7 +41,9 @@ const browserGlobals = {
 module.exports = [
   js.configs.recommended,
   {
-    ignores: ['node_modules/**'],
+    // node_modules, plus vendored third-party code we don't want our
+    // own lint rules applied to.
+    ignores: ['node_modules/**', 'html/static/scripts/qrcode.js'],
   },
   {
     files: ['eslint.config.js', 'server.js', 'test/**/*.js'],
@@ -70,7 +72,7 @@ module.exports = [
     // global without defining it itself.
     files: ['html/static/scripts/chat.js'],
     languageOptions: {
-      globals: { Emic: 'readonly' },
+      globals: { Emic: 'readonly', qrcode: 'readonly' },
     },
   },
   {

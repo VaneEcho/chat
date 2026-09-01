@@ -24,6 +24,11 @@ var Chat = {
 	copy_room_btn: document.getElementById("copy-room-btn"),
 	share_btn: document.getElementById("share_btn"),
 	new_room_btn: document.getElementById("new_room_btn"),
+	qr_btn: document.getElementById("qr_btn"),
+	qr_modal: document.getElementById("qr-modal"),
+	qr_modal_backdrop: document.getElementById("qr-modal-backdrop"),
+	qr_close_btn: document.getElementById("qr-close-btn"),
+	qr_code_container: document.getElementById("qr-code-container"),
 
 	users_panel: document.getElementById("users-panel"),
 	users_backdrop: document.getElementById("users-backdrop"),
@@ -433,6 +438,22 @@ var Chat = {
 		url.search = "";
 		url.searchParams.set("room", Chat.room);
 		return url.toString();
+	},
+
+	show_qr: function(){
+		// Regenerated on every open rather than cached, so it always
+		// reflects the current room even if it somehow changed since
+		// the modal was last shown.
+		var qr = qrcode(0, "M");
+		qr.addData(Chat.room_url());
+		qr.make();
+		Chat.qr_code_container.innerHTML = qr.createSvgTag({ scalable: true });
+
+		Chat.qr_modal.hidden = false;
+	},
+
+	close_qr: function(){
+		Chat.qr_modal.hidden = true;
 	},
 
 	// A real navigation (not history.replaceState, which is what
@@ -856,6 +877,10 @@ var Chat = {
 		Chat.reroll_room_btn.onclick = Chat.reroll_room;
 		Chat.share_btn.onclick = Chat.copy_room_link;
 		Chat.new_room_btn.onclick = Chat.start_new_room;
+
+		Chat.qr_btn.onclick = Chat.show_qr;
+		Chat.qr_close_btn.onclick = Chat.close_qr;
+		Chat.qr_modal_backdrop.onclick = Chat.close_qr;
 
 		Chat.online_count.onclick = Chat.toggle_users_panel;
 		Chat.users_backdrop.onclick = Chat.close_users_panel;
