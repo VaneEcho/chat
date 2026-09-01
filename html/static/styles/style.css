@@ -422,6 +422,11 @@ a{
 	display: block;
 }
 
+.file-placeholder{
+	font-style: italic;
+	opacity: .7;
+}
+
 .message .body a{
 	color: inherit;
 	text-decoration: underline;

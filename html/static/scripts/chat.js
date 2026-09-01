@@ -306,6 +306,16 @@ var Chat = {
 		}
 
 		if(typeof msg.type !== 'undefined'){
+			// A cached placeholder for a file/image that was never
+			// stored in history — the message existed, its data didn't.
+			if(msg.placeholder){
+				var placeholder = document.createElement('span');
+				placeholder.className = 'file-placeholder';
+				placeholder.innerText = "📎 " + (msg.name || "a file") + " (not available in history)";
+				el.appendChild(placeholder);
+				return;
+			}
+
 			// Image
 			if(msg.type.match(/image.*/)){
 				var img = document.createElement('img');

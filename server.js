@@ -187,13 +187,24 @@ io.sockets.on("connection", function(socket){
 			"id": "msg_" + (roomState.msgId++)
 		}
 
-		// Keep file/image attachments out of the in-memory history cache,
-		// so a handful of large uploads can't balloon server memory.
-		if(isTextMessage){
-			roomState.messageCache.push(msg);
-			if(roomState.messageCache.length > cache_size){
-				roomState.messageCache.shift(); // Remove the oldest message
-			}
+		// Keep the actual file/image payload out of the in-memory history
+		// cache, so a handful of large uploads can't balloon server
+		// memory — but cache a lightweight placeholder (name/type only,
+		// no data) instead of dropping the message from history
+		// entirely, so a room's history doesn't have unexplained gaps
+		// where an attachment used to be.
+		const cacheEntry = isTextMessage ? msg : {
+			"f": nick,
+			"m": {
+				"name": typeof data.m.name === "string" ? data.m.name.slice(0, 256) : undefined,
+				"type": typeof data.m.type === "string" ? data.m.type.slice(0, 64) : undefined,
+				"placeholder": true,
+			},
+			"id": msg.id,
+		};
+		roomState.messageCache.push(cacheEntry);
+		if(roomState.messageCache.length > cache_size){
+			roomState.messageCache.shift(); // Remove the oldest message
 		}
 
 		// Send everyone message

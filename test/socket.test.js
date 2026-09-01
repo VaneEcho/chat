@@ -207,7 +207,7 @@ test('cache: CACHE_SIZE above the server-side max is clamped', async (t) => {
   b.disconnect()
 })
 
-test('cache: file attachments are not stored in history', async (t) => {
+test('cache: file attachments are cached as a placeholder, not the payload', async (t) => {
   const server = await startServer({ CACHE_SIZE: '50' })
   t.after(() => stopServer(server))
 
@@ -225,8 +225,12 @@ test('cache: file attachments are not stored in history', async (t) => {
   b.emit('login', { nick: 'Bob', room: 'main' })
   const { msgs } = await waitFor(b, 'previous-msg')
 
-  assert.equal(msgs.length, 1)
-  assert.equal(msgs[0].m.text, 'a text message')
+  assert.equal(msgs.length, 2, 'both the placeholder and the text message should be present')
+  assert.equal(msgs[0].m.placeholder, true)
+  assert.equal(msgs[0].m.name, 'pic.png')
+  assert.equal(msgs[0].m.type, 'image/png')
+  assert.equal(msgs[0].m.url, undefined, 'the actual file payload must never enter the cache')
+  assert.equal(msgs[1].m.text, 'a text message')
 
   a.disconnect()
   b.disconnect()
