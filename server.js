@@ -30,6 +30,12 @@ io.sockets.on("connection", function(socket){
 
 	socket.on("login", function(data){
 		// Security checks
+		if(typeof data !== "object" || data === null || typeof data.nick !== "string"){
+			socket.emit("force-login", "Nick can't be empty.");
+			nick = null;
+			return;
+		}
+
 		data.nick = data.nick.trim();
 
 		// If is empty

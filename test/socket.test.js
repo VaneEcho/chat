@@ -1,6 +1,6 @@
 const test = require('node:test')
 const assert = require('node:assert/strict')
-const { startServer, stopServer, connectClient, waitFor } = require('./helpers')
+const { startServer, stopServer, connectClient, waitFor, wait } = require('./helpers')
 
 test('login: empty nickname is rejected', async (t) => {
   const server = await startServer()
@@ -83,6 +83,34 @@ test('message: rejected before login', async (t) => {
   assert.match(msg, /need to be logged in/i)
   a.disconnect()
 })
+
+for (const [label, payload] of [
+  ['missing nick field', {}],
+  ['null payload', null],
+  ['no payload at all', undefined],
+  ['non-string nick', { nick: 42 }],
+]) {
+  test(`abuse: malformed login payload (${label}) must not crash the server`, async (t) => {
+    const server = await startServer()
+    t.after(() => stopServer(server))
+
+    const a = connectClient(server.port)
+    await waitFor(a, 'connect')
+    if (payload === undefined) a.emit('login')
+    else a.emit('login', payload)
+    await wait(300)
+
+    // Server must still be responsive to a well-formed request afterwards.
+    const b = connectClient(server.port)
+    await waitFor(b, 'connect')
+    b.emit('login', { nick: 'StillAlive' })
+    const start = await waitFor(b, 'start')
+    assert.deepEqual(start.users, ['StillAlive'])
+
+    a.disconnect()
+    b.disconnect()
+  })
+}
 
 test('disconnect: notifies remaining users', async (t) => {
   const server = await startServer()
