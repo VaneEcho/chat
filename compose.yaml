@@ -1,0 +1,9 @@
+services:
+  chat:
+    build: .
+    container_name: chat
+    restart: unless-stopped
+    ports:
+      - "8090:8080"
+    environment:
+      CACHE_SIZE: "50" # optional: text messages kept per room for new joiners. Defaults to 0.

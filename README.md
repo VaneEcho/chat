@@ -1,62 +1,116 @@
 # chat
 
-Simple plug & play real-time JavaScript chat implemented using Socket.io.
+A tiny self-hosted chat room. No accounts, no database, no setup —
+pick a nickname, join a room, chat.
 
-Where simplicity meets usability:
+This is a maintained fork of [m1k1o/chat](https://github.com/m1k1o/chat),
+modernized: current Node.js LTS, a hardened Docker image, input
+validation and flood protection, a redesigned responsive UI with a
+working light/dark theme, and multi-room support with optional room
+passwords.
 
-* No user accounts - just enter nickname and join.
-* No history saved by default - only logged-in users can see recent history.
-* No configuration.
-* Only one room - you can't create any other rooms or write PM to others.
-* Files sharing is possible - without storing any data on server.
-* Emojis - just a few of them.
+## Features
 
-![screenshot](https://raw.githubusercontent.com/m1k1o/chat/master/screenshot.png)
+- No accounts — a nickname is your whole identity
+- Rooms are just a URL (`?room=your-room-name`); open the bare URL and
+  a random room is created for you, share the link to invite others
+- Optional per-room password
+- Real-time messaging, typing indicator, online user list
+- File and image sharing — relayed over the socket, never written to
+  disk
+- No message history by default; an optional bounded in-memory cache
+  (`CACHE_SIZE`) can be enabled per deployment
+- Light / dark / system theme
+- Single Node.js process, no database, no Redis, no external services
 
-## docker
+## Quick start
+
+No published image yet — build it locally, that's still one command:
 
 ```sh
-docker run -d \
-	--name chat \
-	-p 80:80 \
-	m1k1o/chat:latest
+git clone https://github.com/VaneEcho/chat.git
+cd chat
+docker compose up -d
 ```
 
-## docker-compose
+Then open `http://localhost:8090`. See [`compose.yaml`](./compose.yaml).
 
-```yml
-services:
-  chat:
-    image: m1k1o/chat:latest
-    restart: unless-stopped
-    ports:
-      - 80:80
-    environment:
-      CACHE_SIZE: 50 # optional: message count stored. Defaults to zero.
-    healthcheck:
-      interval: 60s
-      retries: 10
-      test: ["CMD", "curl", "http://localhost"]
-      start_period: 5s
-      timeout: 10s
- ```
+Or without Compose:
 
-## Cache
+```sh
+docker build -t chat .
+docker run -d --name chat -p 8090:8080 chat
+```
 
-`CACHE_SIZE` is optional and determines the number of messages stored on the server. When new users join (or reconnect), that cache is sent to give a brief history. This defaults to zero, but can be set as an environment variable.
+## Configuration
 
-If you're not running in a docker container, you can make a `.env` file in the project root with `CACHE_SIZE=50` in.
+Everything has a sane default — none of this is required to run the
+app. All values are environment variables (a `.env` file in the
+project root works too when running outside Docker).
 
-Note: This cache will be text or images so be mindful not to set it too high as it could be n images sent to every new user.
+| Variable                  | Default | Meaning                                                              |
+|----------------------------|---------|-----------------------------------------------------------------------|
+| `PORT`                    | `8080` in Docker, `8090` otherwise | HTTP/WebSocket port |
+| `CACHE_SIZE`               | `0`     | Text messages kept per room for new joiners (clamped to 0–500 server-side). File/image messages are never cached. |
+| `MAX_NICK_LENGTH`          | `32`    | Max nickname length |
+| `MAX_MESSAGE_LENGTH`       | `4000`  | Max text message length |
+| `MAX_ROOM_LENGTH`          | `64`    | Max room id length |
+| `MAX_MESSAGES_PER_WINDOW`  | `5`     | Flood protection: messages allowed per connection per window |
+| `MESSAGE_WINDOW_MS`        | `5000`  | Flood protection window, in ms |
+| `MAX_HTTP_BUFFER_SIZE_MB`  | `1`     | Max Socket.IO payload size (caps file/image uploads) |
 
-## How to install
+## Reverse proxy / Cloudflare
 
-Requirements: `nodejs`, `npm`
+The client always connects to Socket.IO on the same origin it was
+served from, so it works unchanged behind a normal reverse proxy
+(nginx, Caddy, Traefik) or Cloudflare — just make sure WebSocket
+upgrade is passed through, which all of those do by default.
 
-1. Clone this repository.
-	- `git clone https://github.com/m1k1o/chat .`
-2. Install server dependencies.
-	- `npm install`
-3. Run server (default port is `80`).
-	- `npm start [custom_port]`
-4. Done, visit your chat in browser.
+## Security
+
+- All Socket.IO input is validated server-side (nickname, message,
+  room id — never trust the client)
+- Per-connection rate limiting on messages
+- `Content-Security-Policy` and standard security headers on every
+  response
+- Runs as a non-root user in Docker
+- `GET /healthz` for container healthchecks (returns only `{"status":
+  "ok"}`, no user data)
+
+## Privacy
+
+**Stored in memory, for as long as the process runs:**
+- Nicknames and room membership of currently connected users
+- Optionally (if `CACHE_SIZE` > 0), the last few text messages per
+  active room
+
+**Never stored:**
+- Accounts, passwords for anything other than optional room access,
+  or any data on disk
+- Files or images sent through the chat — they're relayed directly
+  between clients, never written anywhere
+- Anything at all once a room empties out (the room and its cache are
+  deleted) or the process restarts
+
+This is HTTPS-in-transit if you put it behind TLS (which you should),
+not end-to-end encryption — the server sees every message in transit
+in order to relay it.
+
+## Development
+
+Requires Node.js 24.
+
+```sh
+npm install
+npm test        # node:test — unit + Socket.IO integration tests
+npm start        # or: node server.js [port]
+```
+
+## License
+
+GPL-3.0, same as upstream. See [`LICENSE`](./LICENSE).
+
+## Credits
+
+Originally created by [m1k1o](https://github.com/m1k1o). This fork is
+maintained at [VaneEcho/chat](https://github.com/VaneEcho/chat).
