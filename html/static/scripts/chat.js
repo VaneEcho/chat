@@ -21,6 +21,9 @@ var Chat = {
 	copy_room_btn: document.getElementById("copy-room-btn"),
 	share_btn: document.getElementById("share_btn"),
 
+	users_panel: document.getElementById("users-panel"),
+	users_backdrop: document.getElementById("users-backdrop"),
+
 	room: null,
 
 	is_focused: false,
@@ -483,6 +486,20 @@ var Chat = {
 	// forget the remembered session, then bounce the connection so the
 	// server's normal disconnect handling (leave room, notify others)
 	// runs and we land back on the login screen.
+	// Mobile-width users drawer. On desktop the panel is always visible
+	// via CSS and this is a harmless no-op (the "open" class/backdrop
+	// only have any effect under the mobile breakpoint).
+	toggle_users_panel: function(){
+		var open = !Chat.users_panel.classList.contains("open");
+		Chat.users_panel.classList.toggle("open", open);
+		Chat.users_backdrop.hidden = !open;
+	},
+
+	close_users_panel: function(){
+		Chat.users_panel.classList.remove("open");
+		Chat.users_backdrop.hidden = true;
+	},
+
 	logout: function(){
 		delete sessionStorage.nick;
 		delete sessionStorage.password;
@@ -683,6 +700,9 @@ var Chat = {
 		// Copy room link (login screen and in-chat header)
 		Chat.copy_room_btn.onclick = Chat.copy_room_link;
 		Chat.share_btn.onclick = Chat.copy_room_link;
+
+		Chat.online_count.onclick = Chat.toggle_users_panel;
+		Chat.users_backdrop.onclick = Chat.close_users_panel;
 
 		// On socket events
 		Chat.socket.on("connect", Chat.connect);

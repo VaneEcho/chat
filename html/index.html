@@ -46,14 +46,15 @@
 		<div id="chat-screen" class="chat" hidden>
 			<header class="chat-header">
 				<span class="chat-title">Chat</span>
-				<span id="online-count" class="online-count">0 online</span>
+				<button id="online-count" class="online-count" type="button">0 online</button>
 				<span class="header-spacer"></span>
 				<button id="share_btn" class="icon-btn" type="button" title="Copy room link" aria-label="Copy room link">⧉</button>
 				<button id="theme_btn" class="icon-btn" type="button" title="Change theme" aria-label="Change theme">◐</button>
 			</header>
 
 			<div class="chat-body">
-				<aside class="users-panel">
+				<div id="users-backdrop" class="users-backdrop" hidden></div>
+				<aside id="users-panel" class="users-panel">
 					<ul id="users" class="users"></ul>
 				</aside>
 

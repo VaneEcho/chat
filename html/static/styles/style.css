@@ -91,8 +91,8 @@ a{
 }
 
 .app{
-	height: 100dvh;
-	height: 100vh;
+	height: 100vh; /* fallback for browsers without dvh support */
+	height: 100dvh; /* actual visible viewport on mobile, address bar and all */
 }
 
 [hidden]{
@@ -212,8 +212,18 @@ a{
 }
 
 .online-count{
+	border: none;
+	background: transparent;
 	color: var(--fg-muted);
 	font-size: 13px;
+	font-family: inherit;
+	cursor: pointer;
+	padding: 4px 6px;
+	border-radius: var(--radius-sm);
+}
+
+.online-count:hover{
+	background: var(--surface-2);
 }
 
 .header-spacer{
@@ -290,8 +300,35 @@ a{
 	border-color: var(--danger);
 }
 
+.users-backdrop{
+	display: none;
+}
+
 @media only screen and (max-width: 700px){
-	.users-panel{ display: none; }
+	.users-panel{
+		position: fixed;
+		top: 0;
+		bottom: 0;
+		left: 0;
+		z-index: 20;
+		width: 220px;
+		max-width: 80vw;
+		transform: translateX(-100%);
+		transition: transform .2s ease;
+		box-shadow: var(--shadow);
+	}
+
+	.users-panel.open{
+		transform: translateX(0);
+	}
+
+	.users-backdrop{
+		display: block;
+		position: fixed;
+		inset: 0;
+		z-index: 15;
+		background: rgba(0, 0, 0, .3);
+	}
 }
 
 .chat-main{
@@ -299,6 +336,7 @@ a{
 	display: flex;
 	flex-direction: column;
 	min-width: 0;
+	min-height: 0;
 }
 
 .chat-box{
