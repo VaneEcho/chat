@@ -38,15 +38,28 @@ Then open `http://localhost:8090`.
 
 ## Docker Compose
 
+Builds from the included `Dockerfile` rather than pulling the
+published image — handy if you're modifying the app.
+
+```yaml
+services:
+  chat:
+    build: .
+    container_name: chat
+    restart: unless-stopped
+    ports:
+      - "8090:8080"
+    environment:
+      CACHE_SIZE: "50" # optional: text messages kept per room for new joiners. Defaults to 0.
+```
+
 ```sh
 git clone https://github.com/VaneEcho/chat.git
 cd chat
 docker compose up -d
 ```
 
-Builds from the included `Dockerfile` (see
-[`compose.yaml`](./compose.yaml)) rather than pulling the published
-image — handy if you're modifying the app.
+See [`compose.yaml`](./compose.yaml).
 
 ## Configuration
 
