@@ -337,12 +337,34 @@ var Chat = {
 
 	// Room id lives in the URL (?room=xxx) so it can be shared as a
 	// link. If none is present, generate one and put it in the address
-	// bar without a page reload.
-	generate_room_id: function(){
-		var charset = "abcdefghijklmnopqrstuvwxyz0123456789";
-		var bytes = new Uint8Array(10);
+	// bar without a page reload. Adjective-noun-number reads and
+	// shares better than a raw random string (~208,000 combinations —
+	// plenty for avoiding accidental collisions; a real secret room
+	// should still use the password field).
+	room_adjectives: ["brave", "calm", "clever", "cosmic", "curious", "daring", "eager", "fuzzy",
+		"gentle", "golden", "happy", "hidden", "jolly", "keen", "lively", "lucky", "merry", "mighty",
+		"misty", "nimble", "quiet", "quick", "rapid", "rosy", "shiny", "silent", "silly", "sleepy",
+		"smooth", "sneaky", "snowy", "sunny", "swift", "tidy", "tiny", "vivid", "witty", "wild",
+		"wise", "zesty"],
+
+	room_nouns: ["badger", "breeze", "canyon", "cloud", "comet", "coral", "dune", "eagle", "ember",
+		"falcon", "fern", "fjord", "forest", "fox", "glacier", "harbor", "hawk", "island", "jungle",
+		"lagoon", "lantern", "meadow", "meteor", "moon", "mountain", "otter", "owl", "panda", "peak",
+		"pebble", "phoenix", "planet", "prairie", "puma", "quartz", "raven", "reef", "ridge", "river",
+		"robin", "shadow", "shore", "sparrow", "star", "stone", "storm", "summit", "thunder", "tiger",
+		"tundra", "valley", "willow", "wolf"],
+
+	random_int: function(max){
+		var bytes = new Uint8Array(1);
 		crypto.getRandomValues(bytes);
-		return Array.from(bytes, function(b){ return charset[b % charset.length]; }).join('');
+		return bytes[0] % max;
+	},
+
+	generate_room_id: function(){
+		var adjective = Chat.room_adjectives[Chat.random_int(Chat.room_adjectives.length)];
+		var noun = Chat.room_nouns[Chat.random_int(Chat.room_nouns.length)];
+		var number = String(Chat.random_int(100)).padStart(2, "0");
+		return adjective + "-" + noun + "-" + number;
 	},
 
 	room_url: function(){
