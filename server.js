@@ -46,28 +46,44 @@ const MAX_MESSAGES_PER_WINDOW = parseInt(process.env.MAX_MESSAGES_PER_WINDOW) ||
 const MESSAGE_WINDOW_MS = parseInt(process.env.MESSAGE_WINDOW_MS) || 5000;
 const MAX_CACHE_SIZE = 500;
 
-let messageCache = [];
 // default cache size to zero. override in environment. clamped so it
 // can't be set to something large enough to grow memory unbounded.
-let cache_size = Math.min(Math.max(parseInt(process.env.CACHE_SIZE) || 0, 0), MAX_CACHE_SIZE)
+const cache_size = Math.min(Math.max(parseInt(process.env.CACHE_SIZE) || 0, 0), MAX_CACHE_SIZE)
+
+const MAX_ROOM_LENGTH = parseInt(process.env.MAX_ROOM_LENGTH) || 64;
+const ROOM_ID_PATTERN = /^[A-Za-z0-9_-]+$/;
+
+function isValidRoomId(room){
+	return typeof room === "string" && room.length > 0 && room.length <= MAX_ROOM_LENGTH && ROOM_ID_PATTERN.test(room);
+}
 
 http.listen(port, function(){
 	console.log("Starting server on port %s", port);
 });
 
-const users = [];
-let msg_id = 1;
+// roomId -> { users: string[], messageCache: object[], msgId: number, password: string }
+// Rooms are created on first join and deleted once the last member
+// leaves, so memory use tracks live occupancy rather than growing
+// without bound.
+const rooms = new Map();
+
 io.sockets.on("connection", function(socket){
 	console.log("New connection!");
 
 	var nick = null;
+	var currentRoom = null;
 	var messageTimestamps = [];
 
 	socket.on("login", function(data){
 		// Security checks
-		if(typeof data !== "object" || data === null || typeof data.nick !== "string"){
+		if(typeof data !== "object" || data === null || typeof data.nick !== "string" || typeof data.room !== "string"){
 			socket.emit("force-login", "Nick can't be empty.");
-			nick = null;
+			return;
+		}
+
+		const room = data.room.trim();
+		if(!isValidRoomId(room)){
+			socket.emit("force-login", "Invalid room.");
 			return;
 		}
 
@@ -76,45 +92,58 @@ io.sockets.on("connection", function(socket){
 		// If is empty
 		if(data.nick == ""){
 			socket.emit("force-login", "Nick can't be empty.");
-			nick = null;
 			return;
 		}
 
 		// If is too long
 		if(data.nick.length > MAX_NICK_LENGTH){
 			socket.emit("force-login", `Nick is too long (max ${MAX_NICK_LENGTH} characters).`);
-			nick = null;
 			return;
 		}
 
-		// If is already in
-		if(users.indexOf(data.nick) != -1){
-			socket.emit("force-login", "This nick is already in chat.");
-			nick = null;
-			return;
+		const password = typeof data.password === "string" ? data.password : "";
+		let roomState = rooms.get(room);
+
+		if(roomState){
+			// If room password doesn't match
+			if(roomState.password !== password){
+				socket.emit("force-login", "Wrong room password.");
+				return;
+			}
+
+			// If nick is already in this room
+			if(roomState.users.indexOf(data.nick) != -1){
+				socket.emit("force-login", "This nick is already in chat.");
+				return;
+			}
+		} else {
+			// First person in: create the room, and set its password.
+			roomState = { users: [], messageCache: [], msgId: 1, password: password };
+			rooms.set(room, roomState);
 		}
 
 		// Save nick
 		nick = data.nick;
-		users.push(data.nick);
+		currentRoom = room;
+		roomState.users.push(nick);
 
-		console.log("User %s joined.", nick.replace(/(<([^>]+)>)/ig, ""));
-		socket.join("main");
+		console.log("User %s joined room %s.", nick.replace(/(<([^>]+)>)/ig, ""), room);
+		socket.join(room);
 
 		// Tell everyone, that user joined
-		io.to("main").emit("ue", {
+		io.to(room).emit("ue", {
 			"nick": nick
 		});
 
 		// Tell this user who is already in
 		socket.emit("start", {
-			"users": users
+			"users": roomState.users,
+			"room": room
 		});
 
 		// Send the message cache to the new user
-		console.log(`going to send cache to ${nick}`)
 		socket.emit("previous-msg", {
-			"msgs": messageCache
+			"msgs": roomState.messageCache
 		});
 	});
 
@@ -124,6 +153,9 @@ io.sockets.on("connection", function(socket){
 			socket.emit("force-login", "You need to be logged in to send message.");
 			return;
 		}
+
+		const roomState = rooms.get(currentRoom);
+		if(!roomState) return;
 
 		// Flood protection: drop messages once this connection exceeds
 		// MAX_MESSAGES_PER_WINDOW within MESSAGE_WINDOW_MS.
@@ -150,20 +182,20 @@ io.sockets.on("connection", function(socket){
 		const msg = {
 			"f": nick,
 			"m": data.m,
-			"id": "msg_" + (msg_id++)
+			"id": "msg_" + (roomState.msgId++)
 		}
 
 		// Keep file/image attachments out of the in-memory history cache,
 		// so a handful of large uploads can't balloon server memory.
 		if(isTextMessage){
-			messageCache.push(msg);
-			if(messageCache.length > cache_size){
-				messageCache.shift(); // Remove the oldest message
+			roomState.messageCache.push(msg);
+			if(roomState.messageCache.length > cache_size){
+				roomState.messageCache.shift(); // Remove the oldest message
 			}
 		}
 
 		// Send everyone message
-		io.to("main").emit("new-msg", msg);
+		io.to(currentRoom).emit("new-msg", msg);
 
 		console.log("User %s sent message.", nick.replace(/(<([^>]+)>)/ig, ""));
 	});
@@ -171,7 +203,7 @@ io.sockets.on("connection", function(socket){
 	socket.on("typing", function(typing){
 		// Only logged in users
 		if(nick != null){
-			socket.broadcast.to("main").emit("typing", {
+			socket.broadcast.to(currentRoom).emit("typing", {
 				status: typing,
 				nick: nick
 			});
@@ -184,17 +216,27 @@ io.sockets.on("connection", function(socket){
 		console.log("Got disconnect!");
 
 		if(nick != null){
-			// Remove user from users
-			users.splice(users.indexOf(nick), 1);
+			const roomState = rooms.get(currentRoom);
 
-			// Tell everyone user left
-			io.to("main").emit("ul", {
-				"nick": nick
-			});
+			if(roomState){
+				// Remove user from room
+				roomState.users.splice(roomState.users.indexOf(nick), 1);
 
-			console.log("User %s left.", nick.replace(/(<([^>]+)>)/ig, ""));
-			socket.leave("main");
+				// Tell everyone user left
+				io.to(currentRoom).emit("ul", {
+					"nick": nick
+				});
+
+				// Destroy the room once it's empty.
+				if(roomState.users.length === 0){
+					rooms.delete(currentRoom);
+				}
+			}
+
+			console.log("User %s left room %s.", nick.replace(/(<([^>]+)>)/ig, ""), currentRoom);
+			socket.leave(currentRoom);
 			nick = null;
+			currentRoom = null;
 		}
 	});
 });

@@ -8,7 +8,7 @@ test('login: empty nickname is rejected', async (t) => {
 
   const a = connectClient(server.port)
   await waitFor(a, 'connect')
-  a.emit('login', { nick: '  ' })
+  a.emit('login', { nick: '  ', room: 'main' })
 
   const msg = await waitFor(a, 'force-login')
   assert.match(msg, /empty/i)
@@ -21,7 +21,7 @@ test('login: normal nickname is accepted and broadcast', async (t) => {
 
   const a = connectClient(server.port)
   await waitFor(a, 'connect')
-  a.emit('login', { nick: 'Alice' })
+  a.emit('login', { nick: 'Alice', room: 'main' })
 
   const start = await waitFor(a, 'start')
   assert.deepEqual(start.users, ['Alice'])
@@ -34,12 +34,12 @@ test('login: duplicate nickname is rejected', async (t) => {
 
   const a = connectClient(server.port)
   await waitFor(a, 'connect')
-  a.emit('login', { nick: 'Alice' })
+  a.emit('login', { nick: 'Alice', room: 'main' })
   await waitFor(a, 'start')
 
   const b = connectClient(server.port)
   await waitFor(b, 'connect')
-  b.emit('login', { nick: 'Alice' })
+  b.emit('login', { nick: 'Alice', room: 'main' })
 
   const msg = await waitFor(b, 'force-login')
   assert.match(msg, /already in chat/i)
@@ -53,12 +53,12 @@ test('message: relayed to other logged-in users', async (t) => {
 
   const a = connectClient(server.port)
   await waitFor(a, 'connect')
-  a.emit('login', { nick: 'Alice' })
+  a.emit('login', { nick: 'Alice', room: 'main' })
   await waitFor(a, 'start')
 
   const b = connectClient(server.port)
   await waitFor(b, 'connect')
-  b.emit('login', { nick: 'Bob' })
+  b.emit('login', { nick: 'Bob', room: 'main' })
   await waitFor(b, 'start')
 
   const received = waitFor(b, 'new-msg')
@@ -88,7 +88,7 @@ for (const [label, payload] of [
   ['missing nick field', {}],
   ['null payload', null],
   ['no payload at all', undefined],
-  ['non-string nick', { nick: 42 }],
+  ['non-string nick', { nick: 42, room: 'main' }],
 ]) {
   test(`abuse: malformed login payload (${label}) must not crash the server`, async (t) => {
     const server = await startServer()
@@ -103,7 +103,7 @@ for (const [label, payload] of [
     // Server must still be responsive to a well-formed request afterwards.
     const b = connectClient(server.port)
     await waitFor(b, 'connect')
-    b.emit('login', { nick: 'StillAlive' })
+    b.emit('login', { nick: 'StillAlive', room: 'main' })
     const start = await waitFor(b, 'start')
     assert.deepEqual(start.users, ['StillAlive'])
 
@@ -118,7 +118,7 @@ test('login: nickname over MAX_NICK_LENGTH is rejected', async (t) => {
 
   const a = connectClient(server.port)
   await waitFor(a, 'connect')
-  a.emit('login', { nick: 'TooLongNick' })
+  a.emit('login', { nick: 'TooLongNick', room: 'main' })
 
   const msg = await waitFor(a, 'force-login')
   assert.match(msg, /too long/i)
@@ -131,12 +131,12 @@ test('message: over MAX_MESSAGE_LENGTH is silently dropped', async (t) => {
 
   const a = connectClient(server.port)
   await waitFor(a, 'connect')
-  a.emit('login', { nick: 'Alice' })
+  a.emit('login', { nick: 'Alice', room: 'main' })
   await waitFor(a, 'start')
 
   const b = connectClient(server.port)
   await waitFor(b, 'connect')
-  b.emit('login', { nick: 'Bob' })
+  b.emit('login', { nick: 'Bob', room: 'main' })
   await waitFor(b, 'start')
 
   let received = null
@@ -162,12 +162,12 @@ test('rate limit: messages beyond the per-window cap are dropped', async (t) => 
 
   const a = connectClient(server.port)
   await waitFor(a, 'connect')
-  a.emit('login', { nick: 'Alice' })
+  a.emit('login', { nick: 'Alice', room: 'main' })
   await waitFor(a, 'start')
 
   const b = connectClient(server.port)
   await waitFor(b, 'connect')
-  b.emit('login', { nick: 'Bob' })
+  b.emit('login', { nick: 'Bob', room: 'main' })
   await waitFor(b, 'start')
 
   const received = []
@@ -189,7 +189,7 @@ test('cache: CACHE_SIZE above the server-side max is clamped', async (t) => {
 
   const a = connectClient(server.port)
   await waitFor(a, 'connect')
-  a.emit('login', { nick: 'Alice' })
+  a.emit('login', { nick: 'Alice', room: 'main' })
   await waitFor(a, 'start')
 
   for (let i = 0; i < 501; i++) {
@@ -199,7 +199,7 @@ test('cache: CACHE_SIZE above the server-side max is clamped', async (t) => {
 
   const b = connectClient(server.port)
   await waitFor(b, 'connect')
-  b.emit('login', { nick: 'Bob' })
+  b.emit('login', { nick: 'Bob', room: 'main' })
   const { msgs } = await waitFor(b, 'previous-msg')
   assert.ok(msgs.length <= 500, `expected cache to be clamped to <= 500, got ${msgs.length}`)
 
@@ -213,7 +213,7 @@ test('cache: file attachments are not stored in history', async (t) => {
 
   const a = connectClient(server.port)
   await waitFor(a, 'connect')
-  a.emit('login', { nick: 'Alice' })
+  a.emit('login', { nick: 'Alice', room: 'main' })
   await waitFor(a, 'start')
 
   a.emit('send-msg', { m: { type: 'image/png', name: 'pic.png', url: 'data:image/png;base64,AAAA' } })
@@ -222,7 +222,7 @@ test('cache: file attachments are not stored in history', async (t) => {
 
   const b = connectClient(server.port)
   await waitFor(b, 'connect')
-  b.emit('login', { nick: 'Bob' })
+  b.emit('login', { nick: 'Bob', room: 'main' })
   const { msgs } = await waitFor(b, 'previous-msg')
 
   assert.equal(msgs.length, 1)
@@ -232,18 +232,129 @@ test('cache: file attachments are not stored in history', async (t) => {
   b.disconnect()
 })
 
+test('rooms: invalid room id is rejected', async (t) => {
+  const server = await startServer()
+  t.after(() => stopServer(server))
+
+  for (const room of ['', '   ', 'has spaces', 'slash/es', '<script>']) {
+    const a = connectClient(server.port)
+    await waitFor(a, 'connect')
+    a.emit('login', { nick: 'Alice', room })
+    const msg = await waitFor(a, 'force-login')
+    assert.match(msg, /room/i, `expected room ${JSON.stringify(room)} to be rejected`)
+    a.disconnect()
+  }
+})
+
+test('rooms: same nickname is fine in different rooms', async (t) => {
+  const server = await startServer()
+  t.after(() => stopServer(server))
+
+  const a = connectClient(server.port)
+  await waitFor(a, 'connect')
+  a.emit('login', { nick: 'Alice', room: 'room-a' })
+  await waitFor(a, 'start')
+
+  const b = connectClient(server.port)
+  await waitFor(b, 'connect')
+  b.emit('login', { nick: 'Alice', room: 'room-b' })
+  const start = await waitFor(b, 'start')
+
+  assert.deepEqual(start.users, ['Alice'])
+  a.disconnect()
+  b.disconnect()
+})
+
+test('rooms: messages do not cross rooms', async (t) => {
+  const server = await startServer()
+  t.after(() => stopServer(server))
+
+  const a = connectClient(server.port)
+  await waitFor(a, 'connect')
+  a.emit('login', { nick: 'Alice', room: 'room-a' })
+  await waitFor(a, 'start')
+
+  const c = connectClient(server.port)
+  await waitFor(c, 'connect')
+  c.emit('login', { nick: 'Carol', room: 'room-b' })
+  await waitFor(c, 'start')
+
+  let leaked = null
+  c.on('new-msg', (m) => { leaked = m })
+
+  a.emit('send-msg', { m: { text: 'room-a only' } })
+  await wait(300)
+
+  assert.equal(leaked, null, 'message from room-a must not reach room-b')
+  a.disconnect()
+  c.disconnect()
+})
+
+test('rooms: password protects a room and is required to join', async (t) => {
+  const server = await startServer()
+  t.after(() => stopServer(server))
+
+  const a = connectClient(server.port)
+  await waitFor(a, 'connect')
+  a.emit('login', { nick: 'Alice', room: 'secret-room', password: 'hunter2' })
+  await waitFor(a, 'start')
+
+  const b = connectClient(server.port)
+  await waitFor(b, 'connect')
+  b.emit('login', { nick: 'Bob', room: 'secret-room', password: 'wrong' })
+  const rejected = await waitFor(b, 'force-login')
+  assert.match(rejected, /password/i)
+
+  const c = connectClient(server.port)
+  await waitFor(c, 'connect')
+  c.emit('login', { nick: 'Carol', room: 'secret-room', password: 'hunter2' })
+  const start = await waitFor(c, 'start')
+  assert.deepEqual(start.users.sort(), ['Alice', 'Carol'])
+
+  a.disconnect()
+  b.disconnect()
+  c.disconnect()
+})
+
+test('rooms: destroyed once empty, new joiner gets a fresh room', async (t) => {
+  const server = await startServer()
+  t.after(() => stopServer(server))
+
+  const a = connectClient(server.port)
+  await waitFor(a, 'connect')
+  a.emit('login', { nick: 'Alice', room: 'ephemeral-room' })
+  await waitFor(a, 'start')
+  a.emit('send-msg', { m: { text: 'hi' } })
+  await wait(200)
+
+  a.disconnect()
+  await wait(300)
+
+  const b = connectClient(server.port)
+  await waitFor(b, 'connect')
+  const startPromise = waitFor(b, 'start')
+  const previousMsgPromise = waitFor(b, 'previous-msg')
+  b.emit('login', { nick: 'Bob', room: 'ephemeral-room' })
+  const start = await startPromise
+  const { msgs } = await previousMsgPromise
+
+  assert.deepEqual(start.users, ['Bob'])
+  assert.equal(msgs.length, 0, 'the old room and its cache should have been destroyed')
+  b.disconnect()
+})
+
 test('disconnect: notifies remaining users', async (t) => {
   const server = await startServer()
   t.after(() => stopServer(server))
 
   const a = connectClient(server.port)
   await waitFor(a, 'connect')
-  a.emit('login', { nick: 'Alice' })
+  a.emit('login', { nick: 'Alice', room: 'main' })
   await waitFor(a, 'start')
 
   const b = connectClient(server.port)
   await waitFor(b, 'connect')
-  b.emit('login', { nick: 'Bob' })
+  b.emit('login', { nick: 'Bob', room: 'main' })
   await waitFor(b, 'start')
 
   const left = waitFor(b, 'ul')
