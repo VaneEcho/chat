@@ -2,11 +2,15 @@ require('dotenv').config()
 const express = require('express')
 const app = express()
 
+app.get('/healthz', function(req, res){
+	res.json({ status: "ok" });
+});
+
 const path = require('path')
 const html = path.join(__dirname, '/html');
 app.use(express.static(html))
 
-const port = process.argv[2] || 8090;
+const port = process.env.PORT || process.argv[2] || 8090;
 const http = require("http").Server(app);
 
 const maxHttpBufferSizeInMb = parseInt(process.env.MAX_HTTP_BUFFER_SIZE_MB || '1');
@@ -130,3 +134,20 @@ io.sockets.on("connection", function(socket){
 		}
 	});
 });
+
+function shutdown(){
+	console.log("Shutting down...");
+	io.close(function(){
+		http.close(function(){
+			process.exit(0);
+		});
+	});
+
+	// Force exit if connections don't close in time.
+	setTimeout(function(){
+		process.exit(1);
+	}, 5000).unref();
+}
+
+process.on("SIGTERM", shutdown);
+process.on("SIGINT", shutdown);
