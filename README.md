@@ -1,5 +1,7 @@
 # chat
 
+[![CI](https://github.com/VaneEcho/chat/actions/workflows/ci.yml/badge.svg)](https://github.com/VaneEcho/chat/actions/workflows/ci.yml)
+
 A tiny self-hosted chat room. No accounts, no database, no setup —
 pick a nickname, join a room, chat.
 
@@ -25,7 +27,10 @@ passwords.
 
 ## Quick start
 
-No published image yet — build it locally, that's still one command:
+No tagged release has been published to GHCR yet (CI builds and
+publishes `ghcr.io/vaneecho/chat` on every `vX.Y.Z` tag — see
+[`.github/workflows/docker.yml`](./.github/workflows/docker.yml)).
+Until then, build it locally — still one command:
 
 ```sh
 git clone https://github.com/VaneEcho/chat.git
