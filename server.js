@@ -17,9 +17,15 @@ const maxHttpBufferSizeInMb = parseInt(process.env.MAX_HTTP_BUFFER_SIZE_MB || '1
 const io = require("socket.io")(http, {
   maxHttpBufferSize: maxHttpBufferSizeInMb * 1024 * 1024,
 });
+
+const MAX_NICK_LENGTH = parseInt(process.env.MAX_NICK_LENGTH) || 32;
+const MAX_MESSAGE_LENGTH = parseInt(process.env.MAX_MESSAGE_LENGTH) || 4000;
+const MAX_CACHE_SIZE = 500;
+
 let messageCache = [];
-// default cache size to zero. override in environment
-let cache_size = process.env.CACHE_SIZE ?? 0
+// default cache size to zero. override in environment. clamped so it
+// can't be set to something large enough to grow memory unbounded.
+let cache_size = Math.min(Math.max(parseInt(process.env.CACHE_SIZE) || 0, 0), MAX_CACHE_SIZE)
 
 http.listen(port, function(){
 	console.log("Starting server on port %s", port);
@@ -45,6 +51,13 @@ io.sockets.on("connection", function(socket){
 		// If is empty
 		if(data.nick == ""){
 			socket.emit("force-login", "Nick can't be empty.");
+			nick = null;
+			return;
+		}
+
+		// If is too long
+		if(data.nick.length > MAX_NICK_LENGTH){
+			socket.emit("force-login", `Nick is too long (max ${MAX_NICK_LENGTH} characters).`);
 			nick = null;
 			return;
 		}
@@ -87,15 +100,31 @@ io.sockets.on("connection", function(socket){
 			return;
 		}
 
+		if(typeof data !== "object" || data === null || typeof data.m !== "object" || data.m === null){
+			return;
+		}
+
+		// If it's a text message, enforce a length cap. Non-text payloads
+		// (file/image attachments) are bounded separately by
+		// MAX_HTTP_BUFFER_SIZE_MB at the transport level.
+		const isTextMessage = typeof data.m.text !== "undefined";
+		if(isTextMessage && (typeof data.m.text !== "string" || data.m.text.length > MAX_MESSAGE_LENGTH)){
+			return;
+		}
+
 		const msg = {
 			"f": nick,
 			"m": data.m,
 			"id": "msg_" + (msg_id++)
 		}
 
-		messageCache.push(msg);
-		if(messageCache.length > cache_size){
-			messageCache.shift(); // Remove the oldest message
+		// Keep file/image attachments out of the in-memory history cache,
+		// so a handful of large uploads can't balloon server memory.
+		if(isTextMessage){
+			messageCache.push(msg);
+			if(messageCache.length > cache_size){
+				messageCache.shift(); // Remove the oldest message
+			}
 		}
 
 		// Send everyone message
