@@ -20,6 +20,7 @@ var Chat = {
 	room_address_input: document.getElementById("room-address-input"),
 	copy_room_btn: document.getElementById("copy-room-btn"),
 	share_btn: document.getElementById("share_btn"),
+	new_room_btn: document.getElementById("new_room_btn"),
 
 	users_panel: document.getElementById("users-panel"),
 	users_backdrop: document.getElementById("users-backdrop"),
@@ -427,6 +428,20 @@ var Chat = {
 		return url.toString();
 	},
 
+	// A real navigation (not history.replaceState, which is what
+	// setup_room uses for the initial silent room assignment): this is
+	// a deliberate "leave this room" action, so it should land in
+	// browser history — the back button then correctly returns to the
+	// room this was clicked from, since that room's id is still in the
+	// previous history entry's URL and setup_room() always prefers an
+	// explicit ?room= over localStorage's remembered one.
+	start_new_room: function(){
+		var url = new URL(location.href);
+		url.search = "";
+		url.searchParams.set("room", Chat.generate_room_id());
+		location.href = url.toString();
+	},
+
 	setup_room: function(){
 		var params = new URLSearchParams(location.search);
 		var room = params.get("room");
@@ -742,6 +757,7 @@ var Chat = {
 		// Copy room link (login screen and in-chat header)
 		Chat.copy_room_btn.onclick = Chat.copy_room_link;
 		Chat.share_btn.onclick = Chat.copy_room_link;
+		Chat.new_room_btn.onclick = Chat.start_new_room;
 
 		Chat.online_count.onclick = Chat.toggle_users_panel;
 		Chat.users_backdrop.onclick = Chat.close_users_panel;
