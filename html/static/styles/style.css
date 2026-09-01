@@ -453,12 +453,16 @@ a{
 	flex-shrink: 0;
 }
 
+.emic-wrap{
+	position: relative;
+	flex-shrink: 0;
+}
+
 .emic-btn{
 	border: none;
 	background: transparent;
 	cursor: pointer;
 	padding: 8px;
-	flex-shrink: 0;
 	border-radius: var(--radius-sm);
 }
 
@@ -468,8 +472,8 @@ a{
 
 .emic{
 	position: absolute;
-	right: 12px;
-	bottom: 64px;
+	left: 0;
+	bottom: calc(100% + 8px);
 	width: 250px;
 	height: 210px;
 	margin: 0;

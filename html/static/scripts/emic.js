@@ -180,6 +180,7 @@ var Emic = {
 			obj.onclick = function(){
 				Emic.textarea.insertAtCaret(' *' + this.dataset.slug + '* ');
 				Emic.textarea.focus();
+				Emic.container.hidden = true;
 			};
 
 			Emic.container.appendChild(obj);

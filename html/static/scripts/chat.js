@@ -366,11 +366,28 @@ var Chat = {
 		Chat.room_address_input.value = Chat.room_url();
 	},
 
-	copy_room_link: function(){
+	// Briefly swap a button's label to confirm the copy happened —
+	// applied to whichever copy button triggered it.
+	flash_copied: function(btn){
+		if(!btn || btn.dataset.flashing) return;
+		btn.dataset.flashing = "1";
+
+		var original = btn.textContent;
+		btn.textContent = "✓";
+		setTimeout(function(){
+			btn.textContent = original;
+			delete btn.dataset.flashing;
+		}, 1200);
+	},
+
+	copy_room_link: function(e){
 		var url = Chat.room_url();
+		var btn = e && e.currentTarget;
 
 		if(navigator.clipboard && navigator.clipboard.writeText){
-			navigator.clipboard.writeText(url);
+			navigator.clipboard.writeText(url).then(function(){
+				Chat.flash_copied(btn);
+			});
 			return;
 		}
 
@@ -386,6 +403,7 @@ var Chat = {
 		tmp.select();
 		try { document.execCommand("copy"); } catch (e) {}
 		document.body.removeChild(tmp);
+		Chat.flash_copied(btn);
 	},
 
 	// Show the login screen. If `errorMessage` is set, this is a

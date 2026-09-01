@@ -57,10 +57,12 @@
 						<ul id="typing" class="typing"></ul>
 					</div>
 					<div class="chat-form">
-						<ul id="emic" class="emic" hidden></ul>
-						<button id="emic_btn" class="emic-btn" type="button" aria-label="Emoji">
-							<img src="static/emic/white-smiling-face.png" width="20px" height="20px" title="White Smiling Face">
-						</button>
+						<div class="emic-wrap">
+							<button id="emic_btn" class="emic-btn" type="button" aria-label="Emoji">
+								<img src="static/emic/white-smiling-face.png" width="20px" height="20px" title="White Smiling Face">
+							</button>
+							<ul id="emic" class="emic" hidden></ul>
+						</div>
 						<textarea id="form_input" class="form-control" data-user-id="2" placeholder="Type a message&hellip;" rows="1"></textarea>
 						<button id="send" class="send-btn" type="button">Send</button>
 					</div>
