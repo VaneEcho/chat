@@ -387,12 +387,17 @@ var Chat = {
 		var room = params.get("room");
 
 		if(!room){
-			room = Chat.generate_room_id();
+			// No room in the URL: return to wherever we were last
+			// (matters for the PWA home screen icon, which always
+			// launches at the bare URL) instead of minting a brand
+			// new empty room every time.
+			room = localStorage.room || Chat.generate_room_id();
 			params.set("room", room);
 			history.replaceState(null, "", location.pathname + "?" + params.toString());
 		}
 
 		Chat.room = room;
+		localStorage.room = room;
 		Chat.room_address_input.value = Chat.room_url();
 	},
 
