@@ -11,6 +11,8 @@ var Chat = {
 	send_btn: document.getElementById("send"),
 
 	login_screen: document.getElementById("login-screen"),
+	login_connecting: document.getElementById("login-connecting"),
+	login_card_content: document.getElementById("login-card-content"),
 	login_form: document.getElementById("login-form"),
 	nick_input: document.getElementById("nick-input"),
 	password_input: document.getElementById("password-input"),
@@ -27,6 +29,8 @@ var Chat = {
 
 	attach_btn: document.getElementById("attach_btn"),
 	file_input: document.getElementById("file_input"),
+	photo_btn: document.getElementById("photo_btn"),
+	photo_input: document.getElementById("photo_input"),
 
 	room: null,
 
@@ -461,6 +465,23 @@ var Chat = {
 		Chat.room_address_input.value = Chat.room_url();
 	},
 
+	// CSS's 100dvh doesn't reliably shrink when the on-screen keyboard
+	// opens across mobile browsers — some just push the whole layout
+	// up instead, hiding the top of the conversation behind the
+	// keyboard. window.visualViewport reports the actual visible area
+	// in real time, so drive .app's height from that directly when
+	// it's available (falls back to plain CSS dvh/vh otherwise).
+	setup_viewport_height: function(){
+		if(!window.visualViewport) return;
+
+		var apply = function(){
+			document.getElementById("app").style.height = window.visualViewport.height + "px";
+		};
+
+		window.visualViewport.addEventListener("resize", apply);
+		apply();
+	},
+
 	// Briefly swap a button's label to confirm the copy happened —
 	// applied to whichever copy button triggered it.
 	flash_copied: function(btn){
@@ -505,8 +526,23 @@ var Chat = {
 	// rejected attempt (empty/too long/duplicate nick/wrong password)
 	// rather than a fresh session, so the previous session's
 	// credentials are dropped to avoid silently retrying them forever.
+	// Shown instead of the (briefly blank) login form while a
+	// remembered session is auto-resuming — on a real navigation (e.g.
+	// the "new room" button) that round trip is a full page load, not
+	// just a quick reconnect, so the flash was clearly visible and
+	// looked like the nickname had been forgotten.
+	show_connecting: function(){
+		Chat.login_error.hidden = true;
+		Chat.login_connecting.hidden = false;
+		Chat.login_card_content.hidden = true;
+		Chat.chat_screen.hidden = true;
+		Chat.login_screen.hidden = false;
+	},
+
 	show_login: function(errorMessage){
 		Chat.self_nick = null;
+		Chat.login_connecting.hidden = true;
+		Chat.login_card_content.hidden = false;
 
 		if(errorMessage){
 			delete sessionStorage.nick;
@@ -695,6 +731,17 @@ var Chat = {
 	init: function(socket){
 		// Parse/generate the room id before anything else can need it.
 		Chat.setup_room();
+		Chat.setup_viewport_height();
+
+		// Decide the very first paint synchronously, before the socket
+		// even connects: a remembered session is about to auto-resume,
+		// so show a neutral "reconnecting" message instead of a
+		// once-visible blank login form (only try_resume_session, on
+		// the async "connect" event, actually knows for sure — this
+		// just avoids the flash while that's in flight).
+		if(sessionStorage.nick){
+			Chat.show_connecting();
+		}
 
 		// Set green favicon
 		Chat.notif.favicon('red');
@@ -794,13 +841,25 @@ var Chat = {
 
 		// Click-to-upload: drag-and-drop alone isn't a thing on touch
 		// devices, so there was previously no way to attach a file on
-		// mobile at all.
+		// mobile at all. Two separate inputs rather than one: an
+		// unrestricted file input (any file type, no camera/gallery
+		// chooser) and a dedicated image/video one (accept="image/*,
+		// video/*", no `capture` attribute so mobile browsers offer
+		// BOTH "Take Photo" and "Choose from Library", not just one).
 		Chat.attach_btn.onclick = function(){
 			Chat.file_input.click();
 		};
 		Chat.file_input.onchange = function(){
 			Chat.send_files(Chat.file_input.files);
 			Chat.file_input.value = ""; // allow re-selecting the same file later
+		};
+
+		Chat.photo_btn.onclick = function(){
+			Chat.photo_input.click();
+		};
+		Chat.photo_input.onchange = function(){
+			Chat.send_files(Chat.photo_input.files);
+			Chat.photo_input.value = "";
 		};
 
 		// close socket upon refresh or tab close, free the username

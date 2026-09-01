@@ -188,6 +188,12 @@ a{
 	text-align: left;
 }
 
+.login-connecting{
+	color: var(--fg-muted);
+	font-size: 14px;
+	margin: 0;
+}
+
 /* ---- Chat shell ------------------------------------------------------ */
 
 .chat{
@@ -234,10 +240,16 @@ a{
 	border: none;
 	background: transparent;
 	cursor: pointer;
-	font-size: 18px;
-	line-height: 1;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--fg);
 	padding: 6px;
 	border-radius: var(--radius-sm);
+}
+
+.icon-btn svg{
+	display: block;
 }
 
 .icon-btn:hover{
@@ -513,11 +525,15 @@ a{
 	border: none;
 	background: transparent;
 	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	color: var(--fg);
 	padding: 8px;
 	border-radius: var(--radius-sm);
 }
 
-.emic-btn img{
+.emic-btn svg{
 	display: block;
 }
 
