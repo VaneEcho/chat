@@ -14,7 +14,7 @@ var Theme = {
 		try {
 			var v = localStorage.getItem(Theme.key);
 			return (v === "light" || v === "dark") ? v : "system";
-		} catch (e) {
+		} catch {
 			return "system";
 		}
 	},
@@ -39,7 +39,7 @@ var Theme = {
 			? (Theme.systemPrefersDark() ? "light" : "dark")
 			: "system";
 
-		try { localStorage.setItem(Theme.key, next); } catch (e) {}
+		try { localStorage.setItem(Theme.key, next); } catch { /* localStorage may be unavailable */ }
 		Theme.apply(next);
 	},
 

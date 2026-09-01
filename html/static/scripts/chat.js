@@ -191,7 +191,7 @@ var Chat = {
 		},
 
 		remove: function(nick){
-			if(Chat.typing.objects.hasOwnProperty(nick)){
+			if(Object.prototype.hasOwnProperty.call(Chat.typing.objects, nick)){
 				var element = Chat.typing.objects[nick];
 				element.parentNode.removeChild(element);
 				delete Chat.typing.objects[nick];
@@ -273,7 +273,7 @@ var Chat = {
 			var text = el.innerHTML;
 
 			// Parse urls
-			text = text.replace(/(https?:\/\/[^\s]+)/g, function(url, a, b){
+			text = text.replace(/(https?:\/\/[^\s]+)/g, function(url){
 				var link = document.createElement('a');
 				link.target = "_blank";
 
@@ -313,7 +313,8 @@ var Chat = {
 			}
 
 			// Audio / Video
-			if(m = msg.type.match(/(audio|video).*/)){
+			var m = msg.type.match(/(audio|video).*/);
+			if(m){
 				var audio = document.createElement(m[1]);
 				audio.controls = 'controls';
 
@@ -423,7 +424,7 @@ var Chat = {
 		document.body.appendChild(tmp);
 		tmp.focus();
 		tmp.select();
-		try { document.execCommand("copy"); } catch (e) {}
+		try { document.execCommand("copy"); } catch { /* best effort */ }
 		document.body.removeChild(tmp);
 		Chat.flash_copied(btn);
 	},
@@ -569,7 +570,7 @@ var Chat = {
 			Chat.typing.remove(r.nick);
 
 			// Remove user
-			if(Chat.user.objects.hasOwnProperty(r.nick)){
+			if(Object.prototype.hasOwnProperty.call(Chat.user.objects, r.nick)){
 				var element = Chat.user.objects[r.nick];
 				element.parentNode.removeChild(element);
 				delete Chat.user.objects[r.nick];

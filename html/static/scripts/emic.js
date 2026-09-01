@@ -135,8 +135,8 @@ var Emic = {
 		str = str.replace(/\*bender\*/g, '<img src="static/images/bender.png" width="128px" height="182px" style="vertical-align:middle;">');
 
 		str = str.replace(/ [O|o]:-?\)+/g, ' *smiling-face-with-halo* ');                             // O:)
-		str = str.replace(/ \>:-?\)+/g, ' *smiling-face-with-horns* ');                               // >:)
-		str = str.replace(/ \>:-?\(+/g, ' *imp* ');                                                   // >:(
+		str = str.replace(/ >:-?\)+/g, ' *smiling-face-with-horns* ');                                // >:)
+		str = str.replace(/ >:-?\(+/g, ' *imp* ');                                                    // >:(
 		str = str.replace(/ :-?D+/g, ' *grinning-face* ');                                            // :D
 		str = str.replace(/ =-?D+/g, ' *grinning-face-with-smiling-eyes* ');                          // =D
 		str = str.replace(/ :-?\)+/g, ' *slightly-smiling-face* ');                                   // :)
@@ -152,7 +152,7 @@ var Emic = {
 		str = str.replace(/ :-?\|+/g, ' *neutral-face* ');                                            // :|
 		str = str.replace(/ :-?O+/g, ' *face-with-open-mouth* ');                                     // :O
 		str = str.replace(/ :-?o+/g, ' *hushed-face* ');                                              // :o
-		str = str.replace(/ :-?\>+/g, ' *smiling-face-with-open-mouth-and-tightly-closed-eyes* ');    // :>
+		str = str.replace(/ :-?>+/g, ' *smiling-face-with-open-mouth-and-tightly-closed-eyes* ');     // :>
 		str = str.replace(/ 8-?\)+/g, ' *smiling-face-with-sunglasses* ');                            // 8)
 		str = str.replace(/ :-?\*+/g, ' *kissing-face* ');                                            // :*
 		str = str.replace(/ ;-?\*+/g, ' *face-throwing-a-kiss* ');                                    // ;*
