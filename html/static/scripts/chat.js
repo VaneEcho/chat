@@ -372,8 +372,7 @@ var Chat = {
 		var cap = function(s){ return s.charAt(0).toUpperCase() + s.slice(1); };
 		var adjective = Chat.word_adjectives[Chat.random_int(Chat.word_adjectives.length)];
 		var noun = Chat.word_nouns[Chat.random_int(Chat.word_nouns.length)];
-		var number = Chat.random_int(100);
-		return cap(adjective) + cap(noun) + number;
+		return cap(adjective) + cap(noun);
 	},
 
 	room_url: function(){
