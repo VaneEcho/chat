@@ -336,19 +336,16 @@ var Chat = {
 		}
 	},
 
-	// Room id lives in the URL (?room=xxx) so it can be shared as a
-	// link. If none is present, generate one and put it in the address
-	// bar without a page reload. Adjective-noun-number reads and
-	// shares better than a raw random string (~208,000 combinations —
-	// plenty for avoiding accidental collisions; a real secret room
-	// should still use the password field).
-	room_adjectives: ["brave", "calm", "clever", "cosmic", "curious", "daring", "eager", "fuzzy",
+	// Shared word lists for generating both room ids and default
+	// nicknames — adjective-noun-number reads and shares better than a
+	// raw random string.
+	word_adjectives: ["brave", "calm", "clever", "cosmic", "curious", "daring", "eager", "fuzzy",
 		"gentle", "golden", "happy", "hidden", "jolly", "keen", "lively", "lucky", "merry", "mighty",
 		"misty", "nimble", "quiet", "quick", "rapid", "rosy", "shiny", "silent", "silly", "sleepy",
 		"smooth", "sneaky", "snowy", "sunny", "swift", "tidy", "tiny", "vivid", "witty", "wild",
 		"wise", "zesty"],
 
-	room_nouns: ["badger", "breeze", "canyon", "cloud", "comet", "coral", "dune", "eagle", "ember",
+	word_nouns: ["badger", "breeze", "canyon", "cloud", "comet", "coral", "dune", "eagle", "ember",
 		"falcon", "fern", "fjord", "forest", "fox", "glacier", "harbor", "hawk", "island", "jungle",
 		"lagoon", "lantern", "meadow", "meteor", "moon", "mountain", "otter", "owl", "panda", "peak",
 		"pebble", "phoenix", "planet", "prairie", "puma", "quartz", "raven", "reef", "ridge", "river",
@@ -361,11 +358,22 @@ var Chat = {
 		return bytes[0] % max;
 	},
 
+	// ~208,000 combinations — plenty for avoiding accidental room
+	// collisions; a real secret room should still use the password
+	// field.
 	generate_room_id: function(){
-		var adjective = Chat.room_adjectives[Chat.random_int(Chat.room_adjectives.length)];
-		var noun = Chat.room_nouns[Chat.random_int(Chat.room_nouns.length)];
+		var adjective = Chat.word_adjectives[Chat.random_int(Chat.word_adjectives.length)];
+		var noun = Chat.word_nouns[Chat.random_int(Chat.word_nouns.length)];
 		var number = String(Chat.random_int(100)).padStart(2, "0");
 		return adjective + "-" + noun + "-" + number;
+	},
+
+	generate_nickname: function(){
+		var cap = function(s){ return s.charAt(0).toUpperCase() + s.slice(1); };
+		var adjective = Chat.word_adjectives[Chat.random_int(Chat.word_adjectives.length)];
+		var noun = Chat.word_nouns[Chat.random_int(Chat.word_nouns.length)];
+		var number = Chat.random_int(100);
+		return cap(adjective) + cap(noun) + number;
 	},
 
 	room_url: function(){
@@ -445,7 +453,11 @@ var Chat = {
 			Chat.login_error.hidden = true;
 		}
 
-		Chat.nick_input.value = localStorage.nick || "";
+		// Fresh browser, nothing remembered yet: suggest a random name
+		// instead of an empty field. A rejected attempt already wrote
+		// its (rejected) value to localStorage.nick before the server
+		// replied, so this only kicks in for a genuinely first visit.
+		Chat.nick_input.value = localStorage.nick || Chat.generate_nickname();
 		Chat.password_input.value = "";
 		Chat.chat_screen.hidden = true;
 		Chat.login_screen.hidden = false;
