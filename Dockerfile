@@ -9,7 +9,7 @@ RUN npm ci --omit=dev
 # Copy app
 COPY . .
 
-ENV MAX_HTTP_BUFFER_SIZE_MB=1
+ENV MAX_HTTP_BUFFER_SIZE_MB=10
 ENV PORT=8080
 
 # Official node images already ship a non-root "node" user.

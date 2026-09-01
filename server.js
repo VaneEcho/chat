@@ -35,7 +35,10 @@ app.use(express.static(html))
 const port = process.env.PORT || process.argv[2] || 8090;
 const http = require("http").Server(app);
 
-const maxHttpBufferSizeInMb = parseInt(process.env.MAX_HTTP_BUFFER_SIZE_MB || '1');
+// Default matches what the client's file-sharing UI has always
+// advertised as the max upload size — a 1MB transport cap silently
+// broke anything close to a real phone photo.
+const maxHttpBufferSizeInMb = parseInt(process.env.MAX_HTTP_BUFFER_SIZE_MB || '10');
 const io = require("socket.io")(http, {
   maxHttpBufferSize: maxHttpBufferSizeInMb * 1024 * 1024,
 });

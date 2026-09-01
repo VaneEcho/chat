@@ -76,7 +76,7 @@ project root works too when running outside Docker).
 | `MAX_ROOM_LENGTH`          | `64`    | Max room id length |
 | `MAX_MESSAGES_PER_WINDOW`  | `5`     | Flood protection: messages allowed per connection per window |
 | `MESSAGE_WINDOW_MS`        | `5000`  | Flood protection window, in ms |
-| `MAX_HTTP_BUFFER_SIZE_MB`  | `1`     | Max Socket.IO payload size (caps file/image uploads) |
+| `MAX_HTTP_BUFFER_SIZE_MB`  | `10`    | Max Socket.IO payload size (caps file/image uploads) |
 
 ## Reverse proxy / Cloudflare
 

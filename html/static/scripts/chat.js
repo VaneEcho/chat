@@ -24,6 +24,9 @@ var Chat = {
 	users_panel: document.getElementById("users-panel"),
 	users_backdrop: document.getElementById("users-backdrop"),
 
+	attach_btn: document.getElementById("attach_btn"),
+	file_input: document.getElementById("file_input"),
+
 	room: null,
 
 	is_focused: false,
@@ -149,6 +152,35 @@ var Chat = {
 		Chat.socket.emit("send-msg", {
 			m: text
 		});
+	},
+
+	// Matches the server's default MAX_HTTP_BUFFER_SIZE_MB (10). A
+	// deployment that overrides that env var won't be reflected here —
+	// the server enforces the real limit regardless, this is just an
+	// early, friendlier check before spending time reading the file.
+	MAX_UPLOAD_BYTES: 10 * 1024 * 1024,
+
+	send_file: function(file){
+		if(file.size > Chat.MAX_UPLOAD_BYTES){
+			alert("Max file size is 10MB");
+			return;
+		}
+
+		var reader = new FileReader();
+		reader.onload = function(e){
+			Chat.send_msg({
+				type: file.type,
+				name: file.name,
+				url: e.target.result
+			});
+		};
+		reader.readAsDataURL(file);
+	},
+
+	send_files: function(fileList){
+		for(var i = 0; i < fileList.length; i++){
+			Chat.send_file(fileList[i]);
+		}
 	},
 
 	send_event: function(){
@@ -741,30 +773,19 @@ var Chat = {
 		dropZone.addEventListener('drop', function(e){
 			e.stopPropagation();
 			e.preventDefault();
-
-			var files = e.dataTransfer.files; // Array of all files
-			for(var i = 0;i < files.length;i++){
-				var file = files[i];
-
-				// Max 10 MB
-				if(file.size > 10485760){
-					alert("Max size of file is 10MB");
-					return;
-				}
-
-				var reader = new FileReader();
-				reader.onload = (function(file){
-					return function(e){
-						Chat.send_msg({
-							type: file.type,
-							name: file.name,
-							url: e.target.result
-						});
-					};
-				})(file);
-				reader.readAsDataURL(file);
-			}
+			Chat.send_files(e.dataTransfer.files);
 		});
+
+		// Click-to-upload: drag-and-drop alone isn't a thing on touch
+		// devices, so there was previously no way to attach a file on
+		// mobile at all.
+		Chat.attach_btn.onclick = function(){
+			Chat.file_input.click();
+		};
+		Chat.file_input.onchange = function(){
+			Chat.send_files(Chat.file_input.files);
+			Chat.file_input.value = ""; // allow re-selecting the same file later
+		};
 
 		// close socket upon refresh or tab close, free the username
 		window.addEventListener("beforeunload", () => {

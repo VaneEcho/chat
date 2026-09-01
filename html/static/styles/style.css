@@ -500,6 +500,10 @@ a{
 	flex-shrink: 0;
 }
 
+.attach-btn{
+	flex-shrink: 0;
+}
+
 .emic-wrap{
 	position: relative;
 	flex-shrink: 0;
