@@ -438,6 +438,14 @@ a{
 .message .body img{
 	max-width: 100%;
 	border-radius: var(--radius-sm);
+	vertical-align: middle;
+}
+
+/* Standalone shared photos / auto-embedded image links, as opposed to
+   the small inline emoji images mixed into message text — those need
+   to flow inline with each other and any surrounding text, not each
+   claim their own line. */
+.message .body img.shared-image{
 	display: block;
 }
 
@@ -484,12 +492,16 @@ a{
 .chat-form{
 	position: relative;
 	display: flex;
-	align-items: flex-end;
+	align-items: center;
 	gap: 8px;
 	padding: 10px 12px;
 	border-top: 1px solid var(--border);
 	background: var(--surface);
 	flex-shrink: 0;
+}
+
+.composer-icon-btn{
+	padding: 10px;
 }
 
 .form-control{

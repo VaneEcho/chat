@@ -326,6 +326,7 @@ var Chat = {
 				// If link is image
 				if(url.match(/.(png|jpe?g|gifv?)([?#].*)?$/g)){
 					var img = document.createElement('img');
+					img.className = 'shared-image';
 					img.style = 'max-width:100%;';
 					img.src = url;
 
@@ -357,6 +358,7 @@ var Chat = {
 			// Image
 			if(msg.type.match(/image.*/)){
 				var img = document.createElement('img');
+				img.className = 'shared-image';
 				img.style = 'max-width:100%;';
 				img.src = msg.url;
 				el.appendChild(img);
