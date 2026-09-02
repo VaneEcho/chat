@@ -542,6 +542,21 @@ a{
 	cursor: zoom-in;
 }
 
+/* Shared videos, capped the same way as shared images (native
+   resolution otherwise blows way past the bubble) — the native
+   player controls already offer fullscreen, so no lightbox needed. */
+.message .body video{
+	display: block;
+	max-width: 220px;
+	max-height: 220px;
+	border-radius: var(--radius-sm);
+}
+
+.message .body audio{
+	display: block;
+	max-width: 100%;
+}
+
 .image-lightbox{
 	position: fixed;
 	inset: 0;

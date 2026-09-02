@@ -565,6 +565,11 @@ var Chat = {
 			// behavior can still nudge the visual viewport itself — pin it
 			// back to the top as a safety net.
 			window.scrollTo(0, 0);
+			// #app shrinking to make room for the keyboard doesn't itself
+			// re-pin the message list to its new bottom — without this the
+			// latest message can end up hidden above the fold until the
+			// user scrolls manually.
+			Chat.scroll();
 		};
 
 		window.visualViewport.addEventListener("resize", apply);
