@@ -118,33 +118,43 @@ var Chat = {
 			document.title = '(' + Chat.notif.msgs + ') ' + Chat.new_title;
 
 			// Do beep
-			Chat.notif.beep.playclip();
+			if(Chat.notif.beep) Chat.notif.beep.playclip();
 
-			// If are'nt allowed notifications
-			if(Notification.permission !== "granted"){
-				Notification.requestPermission();
-				return;
-			}
+			// The actual Notification popup is best-effort: unsupported
+			// or restricted in a lot of mobile browser contexts (a plain
+			// Safari tab, most webviews), and there's nothing useful to
+			// do about that beyond skipping it — this must never be
+			// allowed to throw and take the beep/title update down with
+			// it.
+			try {
+				if(typeof Notification === "undefined") return;
 
-			// Clear notification
-			Chat.notif.clear();
+				// If are'nt allowed notifications
+				if(Notification.permission !== "granted"){
+					Notification.requestPermission();
+					return;
+				}
 
-			// Strip tags
-			from = from.replace(/(<([^>]+)>)/ig, "");
-			message = message.text?.replace(/(<([^>]+)>)/ig, "");
+				// Clear notification
+				Chat.notif.clear();
 
-			// Create new notification
-			Chat.notif.active = new Notification(from, {
-				icon: 'static/images/favicon-blue.png',
-				//timeout: 10,
-				body: message,
-			});
+				// Strip tags
+				from = from.replace(/(<([^>]+)>)/ig, "");
+				message = message.text?.replace(/(<([^>]+)>)/ig, "");
 
-			// On click, focus this window
-			Chat.notif.active.onclick = function(){
-				parent.focus();
-				window.focus();
-			};
+				// Create new notification
+				Chat.notif.active = new Notification(from, {
+					icon: 'static/images/favicon-blue.png',
+					//timeout: 10,
+					body: message,
+				});
+
+				// On click, focus this window
+				Chat.notif.active.onclick = function(){
+					parent.focus();
+					window.focus();
+				};
+			} catch { /* Notification API unsupported/restricted here */ }
 		},
 
 		// Clear notification
@@ -269,9 +279,6 @@ var Chat = {
 		console.log("New message.");
 		const fromSelf = sessionStorage.nick == r.f;
 
-		// Notify user
-		Chat.notif.create(r.f, r.m);
-
 		// The <li> holds the prefix and message bubble as direct
 		// children — it's already the flex column that
 		// align-items:flex-end/flex-start (below) positions them
@@ -312,6 +319,15 @@ var Chat = {
 
 		// Scroll to new message
 		Chat.scroll();
+
+		// Notify user. Deliberately last and never allowed to throw past
+		// this point — this used to run first, and on any client that
+		// never fired a genuine window "focus" event (e.g. handed off
+		// straight from a QR-scanner app into a fresh tab) an unguarded
+		// notification-permission quirk here threw and silently aborted
+		// the whole message render before it ever reached the DOM: you'd
+		// hear the beep but the message itself would never appear.
+		Chat.notif.create(r.f, r.m);
 	},
 
 	append_msg: function(el, msg){
