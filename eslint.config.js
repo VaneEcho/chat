@@ -30,6 +30,8 @@ const browserGlobals = {
   HTMLTextAreaElement: 'readonly',
   URL: 'readonly',
   URLSearchParams: 'readonly',
+  Blob: 'readonly',
+  atob: 'readonly',
   RegExp: 'readonly',
   setTimeout: 'readonly',
   setInterval: 'readonly',

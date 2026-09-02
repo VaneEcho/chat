@@ -33,6 +33,7 @@ var Chat = {
 
 	users_panel: document.getElementById("users-panel"),
 	users_backdrop: document.getElementById("users-backdrop"),
+	users_close_btn: document.getElementById("users-close-btn"),
 
 	attach_btn: document.getElementById("attach_btn"),
 	file_input: document.getElementById("file_input"),
@@ -307,8 +308,7 @@ var Chat = {
 		msg.appendChild(body);
 		c.appendChild(msg);
 
-		// Prepend because flex-direction: column-reverse
-		Chat.msgs_list.prepend(c);
+		Chat.msgs_list.appendChild(c);
 
 		// Scroll to new message
 		Chat.scroll();
@@ -337,8 +337,11 @@ var Chat = {
 				if(url.match(/.(png|jpe?g|gifv?)([?#].*)?$/g)){
 					var img = document.createElement('img');
 					img.className = 'shared-image';
-					img.style = 'max-width:100%;';
 					img.src = url;
+					img.onclick = function(e){
+						e.preventDefault();
+						Chat.image_lightbox.open(img.src);
+					};
 
 					link.innerText = "";
 					link.appendChild(img);
@@ -369,8 +372,10 @@ var Chat = {
 			if(msg.type.match(/image.*/)){
 				var img = document.createElement('img');
 				img.className = 'shared-image';
-				img.style = 'max-width:100%;';
 				img.src = msg.url;
+				img.onclick = function(){
+					Chat.image_lightbox.open(img.src);
+				};
 				el.appendChild(img);
 				return;
 			}
@@ -392,11 +397,33 @@ var Chat = {
 
 			// Default
 			var link = document.createElement('a');
-			link.href = msg.url;
+			// msg.url is a data: URI (see send_file's readAsDataURL) —
+			// Safari blocks top-level navigation to data: URIs from a
+			// link tap (silently does nothing) and never honors the
+			// download attribute either way. A blob: URL is exempt from
+			// that block, and target=_blank gives Safari's own tab
+			// chrome (Share/Save) a way to save it for browsers that,
+			// like Safari, don't support the download attribute.
+			link.href = URL.createObjectURL(Chat.data_url_to_blob(msg.url));
 			link.download = msg.name;
+			link.target = '_blank';
+			link.rel = 'noopener';
 			link.innerText = msg.name;
 			el.appendChild(link);
 		}
+	},
+
+	// Our own send_file always produces "data:<mime>;base64,<data>" via
+	// FileReader.readAsDataURL, so the shape here is guaranteed.
+	data_url_to_blob: function(dataUrl){
+		var comma = dataUrl.indexOf(',');
+		var mime = dataUrl.slice(5, dataUrl.indexOf(';'));
+		var binary = atob(dataUrl.slice(comma + 1));
+		var bytes = new Uint8Array(binary.length);
+		for(var i = 0; i < binary.length; i++){
+			bytes[i] = binary.charCodeAt(i);
+		}
+		return new Blob([bytes], { type: mime });
 	},
 
 	// Shared word lists for generating both room ids and default
@@ -533,10 +560,42 @@ var Chat = {
 
 		var apply = function(){
 			document.getElementById("app").style.height = window.visualViewport.height + "px";
+			// html/body are position:fixed (see style.css) specifically so
+			// this can't happen, but iOS Safari's focus-scroll-into-view
+			// behavior can still nudge the visual viewport itself — pin it
+			// back to the top as a safety net.
+			window.scrollTo(0, 0);
 		};
 
 		window.visualViewport.addEventListener("resize", apply);
+		window.visualViewport.addEventListener("scroll", apply);
 		apply();
+	},
+
+	// WeChat-style: shared photos render as capped thumbnails
+	// (.shared-image in style.css) and open full-size in this overlay
+	// on click; click anywhere on the overlay to close it again.
+	image_lightbox: {
+		overlay: null,
+
+		open: function(src){
+			if(!Chat.image_lightbox.overlay){
+				var overlay = document.createElement('div');
+				overlay.className = 'image-lightbox';
+				overlay.hidden = true;
+				overlay.appendChild(document.createElement('img'));
+				overlay.addEventListener('click', Chat.image_lightbox.close);
+				document.body.appendChild(overlay);
+				Chat.image_lightbox.overlay = overlay;
+			}
+
+			Chat.image_lightbox.overlay.querySelector('img').src = src;
+			Chat.image_lightbox.overlay.hidden = false;
+		},
+
+		close: function(){
+			if(Chat.image_lightbox.overlay) Chat.image_lightbox.overlay.hidden = true;
+		}
 	},
 
 	// Briefly swap a button's label to confirm the copy happened —
@@ -884,6 +943,7 @@ var Chat = {
 
 		Chat.online_count.onclick = Chat.toggle_users_panel;
 		Chat.users_backdrop.onclick = Chat.close_users_panel;
+		Chat.users_close_btn.onclick = Chat.close_users_panel;
 
 		// On socket events
 		Chat.socket.on("connect", Chat.connect);

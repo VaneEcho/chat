@@ -18,6 +18,18 @@ var Theme = {
 		return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
 	},
 
+	// Keep in sync with --bg in style.css. The <meta name=theme-color>
+	// paints the browser's own chrome (status bar / address bar on
+	// mobile) — left hardcoded to the accent purple it looked
+	// mismatched against the actual page background in both themes.
+	bg: { light: "#f5f5f7", dark: "#17171a" },
+
+	syncMetaThemeColor: function(value){
+		var isDark = value === "dark" || (value === "system" && Theme.systemPrefersDark());
+		var meta = document.querySelector('meta[name="theme-color"]');
+		if(meta) meta.setAttribute("content", isDark ? Theme.bg.dark : Theme.bg.light);
+	},
+
 	get: function(){
 		try {
 			var v = localStorage.getItem(Theme.key);
@@ -39,6 +51,8 @@ var Theme = {
 			btn.innerHTML = Theme.icons[value];
 			btn.title = "Theme: " + value + " (click to change)";
 		}
+
+		Theme.syncMetaThemeColor(value);
 	},
 
 	cycle: function(){
@@ -57,6 +71,15 @@ var Theme = {
 		var btn = document.getElementById("theme_btn");
 		if(btn){
 			btn.addEventListener("click", Theme.cycle);
+		}
+
+		// Re-sync if the OS theme flips while we're in "system" mode and
+		// the app is just sitting open (CSS vars already react to this
+		// automatically via @media; the meta tag needs a JS nudge).
+		if(window.matchMedia){
+			window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function(){
+				if(Theme.get() === "system") Theme.syncMetaThemeColor("system");
+			});
 		}
 	}
 };

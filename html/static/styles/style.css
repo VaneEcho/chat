@@ -69,6 +69,14 @@
 
 html, body{
 	height: 100%;
+	/* iOS Safari pans the visual viewport over the page when an input
+	   is focused near the keyboard, even though the page itself never
+	   overflows — position:fixed is what actually stops that pan (plain
+	   overflow:hidden alone doesn't). #app's own height already tracks
+	   window.visualViewport (see setup_viewport_height in chat.js). */
+	position: fixed;
+	width: 100%;
+	overflow: hidden;
 }
 
 body{
@@ -76,7 +84,6 @@ body{
 	background: var(--bg);
 	color: var(--fg);
 	margin: 0;
-	overflow: hidden;
 	-webkit-tap-highlight-color: transparent;
 }
 
@@ -285,6 +292,19 @@ a{
 	padding: 10px 0;
 }
 
+.users-panel-header{
+	display: none;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0 12px 10px;
+}
+
+.users-panel-title{
+	font-size: 13px;
+	font-weight: 600;
+	color: var(--fg-muted);
+}
+
 .users{
 	list-style: none;
 	margin: 0;
@@ -410,6 +430,10 @@ a{
 		z-index: 15;
 		background: rgba(0, 0, 0, .3);
 	}
+
+	.users-panel-header{
+		display: flex;
+	}
 }
 
 .chat-main{
@@ -451,7 +475,7 @@ a{
 
 .msgs{
 	display: flex;
-	flex-direction: column-reverse;
+	flex-direction: column;
 	flex-shrink: 0;
 }
 
@@ -506,9 +530,34 @@ a{
 /* Standalone shared photos / auto-embedded image links, as opposed to
    the small inline emoji images mixed into message text — those need
    to flow inline with each other and any surrounding text, not each
-   claim their own line. */
+   claim their own line. Capped to a thumbnail size (never upscaled)
+   so a full-resolution photo doesn't blow up the whole bubble; click
+   it for the full size via .image-lightbox below. */
 .message .body img.shared-image{
 	display: block;
+	max-width: 220px;
+	max-height: 220px;
+	width: auto;
+	height: auto;
+	cursor: zoom-in;
+}
+
+.image-lightbox{
+	position: fixed;
+	inset: 0;
+	background: rgba(0, 0, 0, .85);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 24px;
+	z-index: 60;
+	cursor: zoom-out;
+}
+
+.image-lightbox img{
+	max-width: 100%;
+	max-height: 100%;
+	border-radius: var(--radius-sm);
 }
 
 .file-placeholder{
