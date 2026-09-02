@@ -25,6 +25,7 @@ var Chat = {
 	share_btn: document.getElementById("share_btn"),
 	new_room_btn: document.getElementById("new_room_btn"),
 	qr_btn: document.getElementById("qr_btn"),
+	logout_btn: document.getElementById("logout_btn"),
 	qr_modal: document.getElementById("qr-modal"),
 	qr_modal_backdrop: document.getElementById("qr-modal-backdrop"),
 	qr_close_btn: document.getElementById("qr-close-btn"),
@@ -699,8 +700,9 @@ var Chat = {
 			Chat.online_count.textContent = n + " online";
 		},
 
-		// Build a user list entry. Self gets a Logout button so this
-		// tab can become a different user next time.
+		// Build a user list entry. Self is marked (still sorted first
+		// by start()/enter() below); the Logout action itself lives in
+		// the header now, alongside the other session/room controls.
 		create_entry: function(nick){
 			var li = document.createElement('li');
 
@@ -711,15 +713,6 @@ var Chat = {
 
 			if(nick === Chat.self_nick){
 				li.classList.add('is-self');
-
-				var logoutBtn = document.createElement('button');
-				logoutBtn.type = 'button';
-				logoutBtn.className = 'icon-btn logout-btn';
-				logoutBtn.title = 'Logout';
-				logoutBtn.setAttribute('aria-label', 'Logout');
-				logoutBtn.innerHTML = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4H6a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h9"/><path d="M11 12h9M17 8l4 4-4 4"/></svg>';
-				logoutBtn.onclick = Chat.logout;
-				li.appendChild(logoutBtn);
 			}
 
 			return li;
@@ -885,6 +878,7 @@ var Chat = {
 		Chat.new_room_btn.onclick = Chat.start_new_room;
 
 		Chat.qr_btn.onclick = Chat.show_qr;
+		Chat.logout_btn.onclick = Chat.logout;
 		Chat.qr_close_btn.onclick = Chat.close_qr;
 		Chat.qr_modal_backdrop.onclick = Chat.close_qr;
 

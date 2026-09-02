@@ -211,6 +211,13 @@ a{
 	flex-shrink: 0;
 }
 
+.header-divider{
+	width: 1px;
+	height: 20px;
+	background: var(--border);
+	flex-shrink: 0;
+}
+
 .chat-title{
 	font-weight: 700;
 	font-size: 15px;
@@ -312,9 +319,7 @@ a{
 }
 
 .logout-btn{
-	border: 1px solid var(--border);
 	color: var(--fg-muted);
-	padding: 4px;
 	flex-shrink: 0;
 }
 

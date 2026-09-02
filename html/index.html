@@ -68,6 +68,10 @@
 					<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="6" height="6" rx="1"/><rect x="14.5" y="3.5" width="6" height="6" rx="1"/><rect x="3.5" y="14.5" width="6" height="6" rx="1"/><path d="M14.5 14.5h3v3h-3zM20.5 14.5v3M14.5 20.5h3M17.5 20.5h3v-3"/></svg>
 				</button>
 				<button id="theme_btn" class="icon-btn" type="button" title="Change theme" aria-label="Change theme"></button>
+				<span class="header-divider"></span>
+				<button id="logout_btn" class="icon-btn logout-btn" type="button" title="Logout" aria-label="Logout">
+					<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4H6a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h9"/><path d="M11 12h9M17 8l4 4-4 4"/></svg>
+				</button>
 			</header>
 
 			<div id="qr-modal" class="qr-modal" hidden>
@@ -94,15 +98,15 @@
 						<ul id="typing" class="typing"></ul>
 					</div>
 					<div class="chat-form">
+						<button id="photo_btn" class="icon-btn composer-icon-btn attach-btn" type="button" aria-label="Camera or photo library" title="Camera or photo library">
+							<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.5a1.5 1.5 0 0 1 1.5-1.5h1.6l1-1.6a1 1 0 0 1 .85-.5h6.1a1 1 0 0 1 .85.5l1 1.6h1.6A1.5 1.5 0 0 1 20 8.5v9A1.5 1.5 0 0 1 18.5 19h-13A1.5 1.5 0 0 1 4 17.5Z"/><circle cx="12" cy="13" r="3.2"/></svg>
+						</button>
+						<input id="photo_input" type="file" hidden accept="image/*,video/*">
+
 						<button id="attach_btn" class="icon-btn composer-icon-btn attach-btn" type="button" aria-label="Attach file" title="Attach file">
 							<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 7.5 8.8 15.7a3 3 0 1 1-4.24-4.25L13.5 2.6a2 2 0 1 1 2.83 2.83L8.2 13.5a1 1 0 1 1-1.42-1.42l6.7-6.7"/></svg>
 						</button>
 						<input id="file_input" type="file" hidden multiple>
-
-						<button id="photo_btn" class="icon-btn composer-icon-btn attach-btn" type="button" aria-label="Camera or photo library" title="Camera or photo library">
-							<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.5a1.5 1.5 0 0 1 1.5-1.5h1.6l1-1.6a1 1 0 0 1 .85-.5h6.1a1 1 0 0 1 .85.5l1 1.6h1.6A1.5 1.5 0 0 1 20 8.5v9A1.5 1.5 0 0 1 18.5 19h-13A1.5 1.5 0 0 1 4 17.5Z"/><circle cx="12" cy="13" r="3.2"/></svg>
-						</button>
-						<input id="photo_input" type="file" hidden multiple accept="image/*,video/*">
 						<div class="emic-wrap">
 							<button id="emic_btn" class="icon-btn composer-icon-btn" type="button" aria-label="Emoji">
 								<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5c1 1.3 2.2 2 3.5 2s2.5-.7 3.5-2"/><circle cx="9" cy="9.5" r=".9" fill="currentColor" stroke="none"/><circle cx="15" cy="9.5" r=".9" fill="currentColor" stroke="none"/></svg>
