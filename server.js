@@ -16,7 +16,10 @@ app.use(function(req, res, next){
 		"style-src 'self' 'unsafe-inline'",
 		"img-src 'self' data: blob:",
 		"media-src 'self' data: blob:",
-		"connect-src 'self' ws: wss:",
+		// 'self' covers the same-origin websocket; a bare ws:/wss: would allow
+		// a connection to any host at all, which is an exfiltration channel
+		// for free.
+		"connect-src 'self'",
 		"object-src 'none'",
 		"base-uri 'self'",
 		"frame-ancestors 'none'",
@@ -53,8 +56,58 @@ const MAX_CACHE_SIZE = 500;
 // can't be set to something large enough to grow memory unbounded.
 const cache_size = Math.min(Math.max(parseInt(process.env.CACHE_SIZE) || 0, 0), MAX_CACHE_SIZE)
 
+const MAX_LOGIN_ATTEMPTS_PER_WINDOW = parseInt(process.env.MAX_LOGIN_ATTEMPTS_PER_WINDOW) || 10;
+const LOGIN_WINDOW_MS = parseInt(process.env.LOGIN_WINDOW_MS) || 60000;
+const MAX_TYPING_PER_WINDOW = parseInt(process.env.MAX_TYPING_PER_WINDOW) || 20;
+
+// Only meaningful behind a reverse proxy you control. Off by default: on a
+// directly exposed server the header is whatever the client chose to send.
+const TRUST_PROXY_HEADER = process.env.TRUST_PROXY_HEADER === "true";
+
 const MAX_ROOM_LENGTH = parseInt(process.env.MAX_ROOM_LENGTH) || 64;
 const ROOM_ID_PATTERN = /^[A-Za-z0-9_-]+$/;
+
+// Only the rightmost X-Forwarded-For entry means anything: a proxy appends the
+// address it actually observed, so everything to its left is whatever the
+// client chose to send. Assumes a single trusted proxy in front.
+function clientAddress(socket){
+	if(TRUST_PROXY_HEADER){
+		const forwarded = socket.handshake.headers["x-forwarded-for"];
+		if(typeof forwarded === "string" && forwarded.length > 0){
+			const hops = forwarded.split(",");
+			const last = hops[hops.length - 1].trim();
+			if(last) return last;
+		}
+	}
+	return socket.handshake.address;
+}
+
+// Login attempts per address. Without this the room password can be guessed as
+// fast as a client can emit, and each attempt is free.
+const loginAttempts = new Map();
+
+function tooManyLogins(address){
+	const now = Date.now();
+	const recent = (loginAttempts.get(address) || []).filter(t => now - t < LOGIN_WINDOW_MS);
+	recent.push(now);
+	loginAttempts.set(address, recent);
+	return recent.length > MAX_LOGIN_ATTEMPTS_PER_WINDOW;
+}
+
+// Addresses that stopped trying should not stay in the map forever.
+setInterval(function(){
+	const now = Date.now();
+	for(const [address, timestamps] of loginAttempts){
+		if(timestamps.every(t => now - t >= LOGIN_WINDOW_MS)){
+			loginAttempts.delete(address);
+		}
+	}
+}, LOGIN_WINDOW_MS).unref();
+
+// Nicknames are free text, so keep control characters out of log lines.
+function forLog(value){
+	return String(value).replace(/(<([^>]+)>)/ig, "").replace(/[\r\n\t]/g, " ").slice(0, 64);
+}
 
 function isValidRoomId(room){
 	return typeof room === "string" && room.length > 0 && room.length <= MAX_ROOM_LENGTH && ROOM_ID_PATTERN.test(room);
@@ -72,14 +125,44 @@ http.listen(port, function(){
 // without bound.
 const rooms = new Map();
 
+// Leaving is the same work whether the socket disconnected or is logging in
+// again. Keeping it in one place is what stops a second login from stranding
+// the previous nick in a room that then never empties and never gets freed.
+function leaveRoom(socket, nick, roomId){
+	if(nick === null || roomId === null) return;
+
+	const roomState = rooms.get(roomId);
+	if(roomState){
+		const index = roomState.users.indexOf(nick);
+		// indexOf can miss; splice(-1, 1) would then evict somebody else.
+		if(index !== -1){
+			roomState.users.splice(index, 1);
+		}
+
+		socket.broadcast.to(roomId).emit("ul", { "nick": nick });
+
+		if(roomState.users.length === 0){
+			rooms.delete(roomId);
+		}
+	}
+
+	socket.leave(roomId);
+}
+
 io.sockets.on("connection", function(socket){
 	console.log("New connection!");
 
 	var nick = null;
 	var currentRoom = null;
 	var messageTimestamps = [];
+	var typingTimestamps = [];
 
 	socket.on("login", function(data){
+		if(tooManyLogins(clientAddress(socket))){
+			socket.emit("force-login", "Too many attempts. Wait a moment and try again.");
+			return;
+		}
+
 		// Security checks
 		if(typeof data !== "object" || data === null || typeof data.nick !== "string" || typeof data.room !== "string"){
 			socket.emit("force-login", "Nick can't be empty.");
@@ -127,12 +210,16 @@ io.sockets.on("connection", function(socket){
 			rooms.set(room, roomState);
 		}
 
+		// Every check has passed, so it is safe to give up the old room. Doing
+		// this only now means a rejected login leaves the socket where it was.
+		leaveRoom(socket, nick, currentRoom);
+
 		// Save nick
 		nick = data.nick;
 		currentRoom = room;
 		roomState.users.push(nick);
 
-		console.log("User %s joined room %s.", nick.replace(/(<([^>]+)>)/ig, ""), room);
+		console.log("User %s joined room %s.", forLog(nick), room);
 		socket.join(room);
 
 		// Tell everyone, that user joined
@@ -167,7 +254,7 @@ io.sockets.on("connection", function(socket){
 		const now = Date.now();
 		messageTimestamps = messageTimestamps.filter(t => now - t < MESSAGE_WINDOW_MS);
 		if(messageTimestamps.length >= MAX_MESSAGES_PER_WINDOW){
-			console.log("Rate limit triggered for %s.", nick.replace(/(<([^>]+)>)/ig, ""));
+			console.log("Rate limit triggered for %s.", forLog(nick));
 			return;
 		}
 		messageTimestamps.push(now);
@@ -213,44 +300,32 @@ io.sockets.on("connection", function(socket){
 		// Send everyone message
 		io.to(currentRoom).emit("new-msg", msg);
 
-		console.log("User %s sent message.", nick.replace(/(<([^>]+)>)/ig, ""));
+		console.log("User %s sent message.", forLog(nick));
 	});
 
 	socket.on("typing", function(typing){
 		// Only logged in users
-		if(nick != null){
-			socket.broadcast.to(currentRoom).emit("typing", {
-				status: typing,
-				nick: nick
-			});
+		if(nick == null) return;
 
-			console.log("%s %s typing.", nick.replace(/(<([^>]+)>)/ig, ""), typing ? "is" : "is not");
-		}
+		// One typing event fans out to everyone else in the room, so it is a
+		// cheaper amplifier than send-msg and needs its own cap.
+		const now = Date.now();
+		typingTimestamps = typingTimestamps.filter(t => now - t < MESSAGE_WINDOW_MS);
+		if(typingTimestamps.length >= MAX_TYPING_PER_WINDOW) return;
+		typingTimestamps.push(now);
+
+		socket.broadcast.to(currentRoom).emit("typing", {
+			status: typing,
+			nick: nick
+		});
 	});
 
 	socket.on("disconnect", function(){
 		console.log("Got disconnect!");
 
 		if(nick != null){
-			const roomState = rooms.get(currentRoom);
-
-			if(roomState){
-				// Remove user from room
-				roomState.users.splice(roomState.users.indexOf(nick), 1);
-
-				// Tell everyone user left
-				io.to(currentRoom).emit("ul", {
-					"nick": nick
-				});
-
-				// Destroy the room once it's empty.
-				if(roomState.users.length === 0){
-					rooms.delete(currentRoom);
-				}
-			}
-
-			console.log("User %s left room %s.", nick.replace(/(<([^>]+)>)/ig, ""), currentRoom);
-			socket.leave(currentRoom);
+			console.log("User %s left room %s.", forLog(nick), currentRoom);
+			leaveRoom(socket, nick, currentRoom);
 			nick = null;
 			currentRoom = null;
 		}
