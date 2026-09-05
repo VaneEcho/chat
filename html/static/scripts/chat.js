@@ -97,7 +97,14 @@ var Chat = {
 					audio_element.pause();
 					audio_element.volume = 0.5;
 					audio_element.currentTime = 0;
-					audio_element.play();
+					// play() rejects when the tab has had no user gesture yet.
+					// An unhandled rejection here is noise at best, and this
+					// runs on the message-render path where a throw would cost
+					// the message itself.
+					var played = audio_element.play();
+					if(played && typeof played.catch === "function"){
+						played.catch(function(){});
+					}
 				};
 
 				return audio_element;
@@ -354,10 +361,6 @@ var Chat = {
 					var img = document.createElement('img');
 					img.className = 'shared-image';
 					img.src = url;
-					img.onclick = function(e){
-						e.preventDefault();
-						Chat.image_lightbox.open(img.src);
-					};
 
 					link.innerText = "";
 					link.appendChild(img);
@@ -389,9 +392,6 @@ var Chat = {
 				var img = document.createElement('img');
 				img.className = 'shared-image';
 				img.src = msg.url;
-				img.onclick = function(){
-					Chat.image_lightbox.open(img.src);
-				};
 				el.appendChild(img);
 				return;
 			}
@@ -412,15 +412,25 @@ var Chat = {
 			}
 
 			// Default
+			var blob = Chat.data_url_to_blob(msg.url);
+			if(!blob){
+				var broken = document.createElement('span');
+				broken.className = 'file-placeholder';
+				broken.innerText = "\uD83D\uDCCE " + (msg.name || "a file") + " (unreadable)";
+				el.appendChild(broken);
+				return;
+			}
+
 			var link = document.createElement('a');
-			// msg.url is a data: URI (see send_file's readAsDataURL) —
-			// Safari blocks top-level navigation to data: URIs from a
-			// link tap (silently does nothing) and never honors the
-			// download attribute either way. A blob: URL is exempt from
-			// that block, and target=_blank gives Safari's own tab
-			// chrome (Share/Save) a way to save it for browsers that,
-			// like Safari, don't support the download attribute.
-			link.href = URL.createObjectURL(Chat.data_url_to_blob(msg.url));
+			// A blob: URL rather than the data: URI it arrived as — Safari
+			// blocks top-level navigation to data: URIs from a link tap
+			// (silently does nothing) and never honors the download
+			// attribute either way. A blob: URL is exempt from that block,
+			// and target=_blank gives Safari's own tab chrome (Share/Save)
+			// a way to save it.
+			var href = URL.createObjectURL(blob);
+			Chat.object_urls.push(href);
+			link.href = href;
 			link.download = msg.name;
 			link.target = '_blank';
 			link.rel = 'noopener';
@@ -429,17 +439,41 @@ var Chat = {
 		}
 	},
 
-	// Our own send_file always produces "data:<mime>;base64,<data>" via
-	// FileReader.readAsDataURL, so the shape here is guaranteed.
+	// Blob URLs stay alive until revoked. They are released together with the
+	// messages that reference them (see connect), never before, so a file
+	// stays downloadable for as long as it is still on screen.
+	object_urls: [],
+
+	revoke_object_urls: function(){
+		Chat.object_urls.forEach(function(url){ URL.revokeObjectURL(url); });
+		Chat.object_urls = [];
+	},
+
+	// msg.url arrives over the socket, so nothing about its shape is
+	// guaranteed. The previous version assumed our own send_file had produced
+	// it and let atob throw straight out of the render, which silently lost
+	// the whole message. Returns null instead of throwing.
+	//
+	// The blob is always typed application/octet-stream rather than the
+	// sender's MIME: a blob: URL is same-origin, so letting a peer choose
+	// text/html here would hand them script execution on this origin in any
+	// browser that navigates to the link instead of downloading it.
 	data_url_to_blob: function(dataUrl){
-		var comma = dataUrl.indexOf(',');
-		var mime = dataUrl.slice(5, dataUrl.indexOf(';'));
-		var binary = atob(dataUrl.slice(comma + 1));
-		var bytes = new Uint8Array(binary.length);
-		for(var i = 0; i < binary.length; i++){
-			bytes[i] = binary.charCodeAt(i);
+		if(typeof dataUrl !== 'string') return null;
+
+		var match = /^data:[a-z0-9.+-]+\/[a-z0-9.+-]+(;[a-z0-9-]+=[^;,]*)*;base64,([a-z0-9+/]*={0,2})$/i.exec(dataUrl);
+		if(!match) return null;
+
+		try {
+			var binary = atob(match[2]);
+			var bytes = new Uint8Array(binary.length);
+			for(var i = 0; i < binary.length; i++){
+				bytes[i] = binary.charCodeAt(i);
+			}
+			return new Blob([bytes], { type: 'application/octet-stream' });
+		} catch {
+			return null;
 		}
-		return new Blob([bytes], { type: mime });
 	},
 
 	// Shared word lists for generating both room ids and default
@@ -861,6 +895,7 @@ var Chat = {
 		Chat.is_online = true;
 
 		document.getElementById('offline').hidden = true;
+		Chat.revoke_object_urls();
 		Chat.msgs_list.innerText = '';
 		Chat.typing_list.innerText = '';
 		Chat.users.innerText = '';
@@ -978,6 +1013,16 @@ var Chat = {
 		Chat.socket.on("start", Chat.user.start);
 		Chat.socket.on("ue", Chat.user.enter);
 		Chat.socket.on("ul", Chat.user.leave);
+
+		// Delegated: a linkified image URL is rebuilt from an outerHTML
+		// string, which drops any handler assigned to the element, so
+		// per-image onclick only ever worked for one of the two paths.
+		Chat.msgs_list.addEventListener('click', function(e){
+			if(e.target.tagName === 'IMG' && e.target.classList.contains('shared-image')){
+				e.preventDefault();
+				Chat.image_lightbox.open(e.target.src);
+			}
+		});
 
 		var dropZone = document.getElementsByTagName("body")[0];
 
