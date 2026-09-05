@@ -1,9 +1,11 @@
 services:
-  chat:
-    build: .
-    container_name: chat
+  wisp:
+    image: ghcr.io/vaneecho/wisp:latest
+    container_name: wisp
     restart: unless-stopped
     ports:
       - "8090:8080"
-    environment:
-      CACHE_SIZE: "50" # optional: text messages kept per room for new joiners. Defaults to 0.
+    # 全部可选，不写就是默认值
+    # environment:
+    #   CACHE_SIZE: "50"          # 每个房间为后进者保留的文本消息数，默认 0
+    #   TRUST_PROXY_HEADER: "true" # 置于你自己的反向代理之后时开启
